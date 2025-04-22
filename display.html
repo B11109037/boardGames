@@ -1,4 +1,28 @@
 <!-- 📱 六人用手機投資App前端雛形（含暱稱登入與自動建立帳號） -->
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
+  authDomain: "broadgame-9bc04.firebaseapp.com",
+  databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "broadgame-9bc04",
+  storageBucket: "broadgame-9bc04.firebasestorage.app",
+  messagingSenderId: "220150025271",
+  appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
+  measurementId: "G-6T9GW9LVD7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
