@@ -1,34 +1,97 @@
 <!-- 📱 六人用手機投資App前端雛形（含暱稱登入與自動建立帳號） -->
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
-  authDomain: "broadgame-9bc04.firebaseapp.com",
-  databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "broadgame-9bc04",
-  storageBucket: "broadgame-9bc04.firebasestorage.app",
-  messagingSenderId: "220150025271",
-  appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
-  measurementId: "G-6T9GW9LVD7"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>資安桌遊投資系統</title>
+  <script type="module">
+    // Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
+      authDomain: "broadgame-9bc04.firebaseapp.com",
+      databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "broadgame-9bc04",
+      storageBucket: "broadgame-9bc04.firebasestorage.app",
+      messagingSenderId: "220150025271",
+      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
+      measurementId: "G-6T9GW9LVD7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    let currentUser = "";
+
+    window.login = async function login() {
+      const name = document.getElementById("nickname").value.trim();
+      if (!name) return alert("請輸入暱稱！");
+      currentUser = name;
+
+      const userRef = ref(db, 'users/' + name);
+      const snapshot = await get(userRef);
+      if (!snapshot.exists()) {
+        await set(userRef, { money: 100 });
+      }
+
+      document.getElementById("login").style.display = "none";
+      document.getElementById("main").style.display = "block";
+      document.getElementById("playerName").textContent = name;
+
+      onValue(userRef, (snapshot) => {
+        const data = snapshot.val();
+        document.getElementById("money").textContent = `$${data.money}`;
+      });
+
+      const allUsersRef = ref(db, 'users/');
+      const allSnapshot = await get(allUsersRef);
+      const targetSelect = document.getElementById("target");
+      targetSelect.innerHTML = "";
+
+      allSnapshot.forEach(child => {
+        if (child.key !== name) {
+          const opt = document.createElement("option");
+          opt.value = child.key;
+          opt.textContent = child.key;
+          targetSelect.appendChild(opt);
+        }
+      });
+
+      document.getElementById("investSection").style.display = "block";
+    }
+
+    window.invest = async function invest() {
+      const target = document.getElementById("target").value;
+      const amount = parseInt(document.getElementById("amount").value);
+      const status = document.getElementById("status");
+
+      if (!target || isNaN(amount) || amount <= 0) {
+        status.textContent = "請選擇對象並輸入有效金額。";
+        return;
+      }
+
+      const userRef = ref(db, 'users/' + currentUser);
+      const targetRef = ref(db, 'users/' + target);
+      const [userSnap, targetSnap] = await Promise.all([get(userRef), get(targetRef)]);
+      const userData = userSnap.val();
+      const targetData = targetSnap.val();
+
+      if (amount > userData.money) {
+        status.textContent = "你的錢不夠啦！";
+        return;
+      }
+
+      await update(userRef, { money: userData.money - amount });
+      await update(targetRef, { money: (targetData.money || 0) + amount });
+
+      status.textContent = `✅ 你已成功投資 ${target} $${amount}`;
+    }
+  </script>
   <style>
     body {
       font-family: sans-serif;
@@ -68,14 +131,12 @@ const analytics = getAnalytics(app);
   </style>
 </head>
 <body>
-  <!-- 登入畫面 -->
   <div class="card" id="login">
     <h2>請輸入你的暱稱</h2>
     <input type="text" id="nickname" placeholder="例如：Alan">
     <button onclick="login()">登入遊戲</button>
   </div>
 
-  <!-- 玩家主畫面 -->
   <div id="main">
     <div class="card">
       <h2>玩家：<span id="playerName"></span></h2>
@@ -85,75 +146,12 @@ const analytics = getAnalytics(app);
     <div class="card" id="investSection">
       <h3>我要投資：</h3>
       <label for="target">選擇對象：</label>
-      <select id="target">
-        <!-- 將在登入後動態生成 -->
-      </select>
-
+      <select id="target"></select>
       <label for="amount">投資金額：</label>
       <input type="number" id="amount" placeholder="輸入金額，如20" min="1">
-
       <button onclick="invest()">確認投資</button>
       <p id="status"></p>
     </div>
   </div>
-
-  <script>
-    let currentUser = "";
-    const users = {};
-
-    function login() {
-      const name = document.getElementById("nickname").value.trim();
-      if (!name) return alert("請輸入暱稱！");
-      currentUser = name;
-
-      // 自動建立帳號
-      if (!users[name]) {
-        users[name] = { money: 100 };
-      }
-
-      // 顯示主頁面
-      document.getElementById("login").style.display = "none";
-      document.getElementById("main").style.display = "block";
-      document.getElementById("playerName").textContent = name;
-      updateMoney();
-
-      // 建立可投資對象（排除自己）
-      const targetSelect = document.getElementById("target");
-      targetSelect.innerHTML = "";
-      Object.keys(users).forEach(u => {
-        if (u !== name) {
-          const opt = document.createElement("option");
-          opt.value = u;
-          opt.textContent = u;
-          targetSelect.appendChild(opt);
-        }
-      });
-      document.getElementById("investSection").style.display = "block";
-    }
-
-    function updateMoney() {
-      document.getElementById("money").textContent = `$${users[currentUser].money}`;
-    }
-
-    function invest() {
-      const target = document.getElementById("target").value;
-      const amount = parseInt(document.getElementById("amount").value);
-      const status = document.getElementById("status");
-
-      if (!target || isNaN(amount) || amount <= 0) {
-        status.textContent = "請選擇對象並輸入有效金額。";
-        return;
-      }
-      if (amount > users[currentUser].money) {
-        status.textContent = "你的錢不夠啦！";
-        return;
-      }
-
-      users[currentUser].money -= amount;
-      users[target].money = (users[target].money || 0) + amount;
-      updateMoney();
-      status.textContent = `✅ 你已成功投資 ${target} $${amount}`;
-    }
-  </script>
 </body>
 </html>
