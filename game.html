@@ -7,8 +7,13 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from './components/roleActions.js';
-
+    import { renderRoleUI } from './components/roleActions.js';//加入遊戲角色選擇
+    const url = new URLSearchParams(window.location.search);
+      const player = url.get('player');
+      const room = url.get('room');
+  
+    renderRoleUI(player, room);
+    
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
       authDomain: "broadgame-9bc04.firebaseapp.com",
