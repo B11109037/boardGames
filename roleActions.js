@@ -14,6 +14,8 @@ export async function renderRoleUI(playerName, roomCode) {
 
   if (role === "詐騙者" || role === "投資客") {
     renderInvestorList(playerName, roomCode, container);
+  } else if (role === "普通人") {
+    renderInvestmentHistory(playerName, roomCode, container);
   }
 }
 
@@ -33,6 +35,11 @@ function renderInvestorList(playerName, roomCode, container) {
       `;
       list.appendChild(item);
     }
+
+    const distributeAllBtn = document.createElement("button");
+    distributeAllBtn.textContent = "📤 分配全部資金";
+    distributeAllBtn.onclick = () => distributeAll(playerName, roomCode, investors);
+    list.appendChild(distributeAllBtn);
 
     const scamBtn = document.createElement("button");
     scamBtn.textContent = "🧨 一鍵捲款 (詐騙者專用)";
@@ -82,4 +89,49 @@ async function scamAll(playerName, roomCode, investors) {
     investors: null
   });
   alert("你已成功詐騙全部投資金！");
+}
+
+async function distributeAll(playerName, roomCode, investors) {
+  const playerRef = ref(db, `rooms/${roomCode}/players/${playerName}`);
+  const playerSnap = await get(playerRef);
+  const currentMoney = playerSnap.val().money || 0;
+
+  let share = Math.floor(currentMoney / Object.keys(investors).length);
+  for (let name in investors) {
+    const targetRef = ref(db, `rooms/${roomCode}/players/${name}`);
+    const targetSnap = await get(targetRef);
+    const targetMoney = targetSnap.val().money || 0;
+    await update(targetRef, { money: targetMoney + share });
+  }
+
+  await update(playerRef, { money: 0 });
+  alert("已平均分配所有金額給投資者！");
+}
+
+function renderInvestmentHistory(playerName, roomCode, container) {
+  const invRef = ref(db, `rooms/${roomCode}/players`);
+  onValue(invRef, (snap) => {
+    const players = snap.val() || {};
+    const history = [];
+
+    for (let target in players) {
+      const investors = players[target]?.investors || {};
+      if (investors[playerName]) {
+        history.push({
+          target,
+          amount: investors[playerName]
+        });
+      }
+    }
+
+    const box = document.createElement("div");
+    box.innerHTML = `<h4>你投資的對象：</h4>`;
+    history.forEach(({ target, amount }) => {
+      const p = document.createElement("p");
+      p.textContent = `${target}：你投資 $${amount}`;
+      box.appendChild(p);
+    });
+
+    container.appendChild(box);
+  });
 }
