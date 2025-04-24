@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>遊戲畫面</title>
+  <title>資安桌遊主畫面</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -23,74 +23,67 @@
     const db = getDatabase();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const room = urlParams.get("room");
-    const user = urlParams.get("user");
-    let currentUser = user;
+    const currentRoom = urlParams.get('room');
+    const currentUser = urlParams.get('user');
 
-    document.getElementById("playerName").textContent = user;
+    document.getElementById("playerName").textContent = currentUser;
 
-    const userRef = ref(db, `users/${user}`);
+    // 初始化帳號
+    const userRef = ref(db, `users/${currentUser}`);
     get(userRef).then(snapshot => {
       if (!snapshot.exists()) {
         set(userRef, { money: 100 });
       }
-      listenToBalance();
-      listenToPlayers();
     });
 
-    function listenToBalance() {
-      const moneyRef = ref(db, `users/${currentUser}/money`);
-      onValue(moneyRef, (snapshot) => {
-        document.getElementById("money").textContent = `$${snapshot.val()}`;
-      });
-    }
+    // 即時監聽金額
+    const moneyRef = ref(db, `users/${currentUser}/money`);
+    onValue(moneyRef, (snap) => {
+      document.getElementById("money").textContent = `$${snap.val()}`;
+    });
 
-    function listenToPlayers() {
-      const usersRef = ref(db, "users");
-      onValue(usersRef, (snapshot) => {
-        const players = snapshot.val();
-        const targetSelect = document.getElementById("target");
-        targetSelect.innerHTML = "";
-
-        for (let name in players) {
-          if (name !== currentUser) {
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            targetSelect.appendChild(opt);
-          }
+    // 監聽所有玩家
+    const usersRef = ref(db, "users");
+    onValue(usersRef, (snap) => {
+      const all = snap.val();
+      const target = document.getElementById("target");
+      target.innerHTML = "";
+      for (let name in all) {
+        if (name !== currentUser) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          target.appendChild(opt);
         }
-      });
-    }
+      }
+    });
 
+    // 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
       const status = document.getElementById("status");
 
       if (!target || isNaN(amount) || amount <= 0) {
-        status.textContent = "請選擇對象並輸入有效金額。";
+        status.textContent = "請輸入有效金額與對象。";
         return;
       }
 
       const userRef = ref(db, `users/${currentUser}/money`);
       const snapshot = await get(userRef);
-      const currentMoney = snapshot.val();
-
-      if (amount > currentMoney) {
+      const balance = snapshot.val();
+      if (amount > balance) {
         status.textContent = "你的錢不夠啦！";
         return;
       }
 
-      await update(ref(db, `users/${currentUser}`), { money: currentMoney - amount });
-
+      await update(ref(db, `users/${currentUser}`), { money: balance - amount });
       const targetRef = ref(db, `users/${target}/money`);
       const targetSnap = await get(targetRef);
       const targetMoney = targetSnap.exists() ? targetSnap.val() : 0;
-
       await update(ref(db, `users/${target}`), { money: targetMoney + amount });
-      status.textContent = `✅ 你已成功投資 ${target} $${amount}`;
-    };
+      status.textContent = `✅ 成功投資 ${target} $${amount}`;
+    }
   </script>
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
@@ -102,11 +95,16 @@
   <div class="card">
     <h2>玩家：<span id="playerName"></span></h2>
     <p>💰 我的餘額：<strong id="money">$0</strong></p>
+  </div>
+
+  <div class="card">
     <h3>我要投資：</h3>
     <label for="target">選擇對象：</label>
     <select id="target"></select>
+
     <label for="amount">投資金額：</label>
     <input type="number" id="amount" placeholder="輸入金額，如20" min="1" />
+
     <button onclick="invest()">確認投資</button>
     <p id="status"></p>
   </div>
