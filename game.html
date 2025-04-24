@@ -7,6 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { renderRoleUI } from './components/roleActions.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -28,7 +29,6 @@
 
     document.getElementById("playerName").textContent = currentUser;
 
-    // 初始化帳號
     const userRef = ref(db, `users/${currentUser}`);
     get(userRef).then(snapshot => {
       if (!snapshot.exists()) {
@@ -36,13 +36,11 @@
       }
     });
 
-    // 即時監聽金額
     const moneyRef = ref(db, `users/${currentUser}/money`);
     onValue(moneyRef, (snap) => {
       document.getElementById("money").textContent = `$${snap.val()}`;
     });
 
-    // 監聽所有玩家
     const usersRef = ref(db, "users");
     onValue(usersRef, (snap) => {
       const all = snap.val();
@@ -58,7 +56,6 @@
       }
     });
 
-    // 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
@@ -83,30 +80,23 @@
       const targetMoney = targetSnap.exists() ? targetSnap.val() : 0;
       await update(ref(db, `users/${target}`), { money: targetMoney + amount });
       status.textContent = `✅ 成功投資 ${target} $${amount}`;
-    }
+    };
+
+    renderRoleUI(currentUser, currentRoom);
   </script>
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     button, input, select { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
   </style>
-  <script type="module">
-    import { renderRoleUI } from './components/roleActions.js';
-  
-    const url = new URLSearchParams(window.location.search);
-    const player = url.get('player');
-    const room = url.get('room');
-  
-    renderRoleUI(player, room);
-  </script>
-
 </head>
 <body>
   <div class="card">
     <h2>玩家：<span id="playerName"></span></h2>
     <p>💰 我的餘額：<strong id="money">$0</strong></p>
   </div>
-    <div id="roleActions"></div>
+
+  <div id="roleActions"></div>
 
   <div class="card">
     <h3>我要投資：</h3>
