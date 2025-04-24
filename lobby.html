@@ -24,6 +24,7 @@
 
     let currentUser = "";
     let currentRoom = "";
+    let isHost = false;
 
     window.login = () => {
       const name = document.getElementById("nickname").value.trim();
@@ -31,6 +32,7 @@
       currentUser = name;
       document.getElementById("login").style.display = "none";
       document.getElementById("lobby").style.display = "block";
+      document.getElementById("userNameDisplay").textContent = name;
     };
 
     window.createRoom = async () => {
@@ -40,28 +42,63 @@
         players: { [currentUser]: true },
         started: false
       });
-      joinRoom(roomCode);
+      isHost = true;
+      currentRoom = roomCode;
+      enterRoom(roomCode);
     };
 
-    window.joinRoom = async (code = null) => {
-      if (!code) code = document.getElementById("roomCode").value.trim();
+    window.joinRoom = async () => {
+      const code = document.getElementById("roomCode").value.trim();
+      if (!code) return alert("請輸入房號");
       const roomRef = ref(db, `rooms/${code}`);
       const snapshot = await get(roomRef);
       if (!snapshot.exists()) return alert("房間不存在！");
 
       currentRoom = code;
       await update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
+      enterRoom(code);
+    };
 
-      // 跳轉頁面並附帶參數
-      const url = `game.html?room=${currentRoom}&user=${encodeURIComponent(currentUser)}`;
-      window.location.href = url;
+    function enterRoom(code) {
+      document.getElementById("lobby").style.display = "none";
+      document.getElementById("roomLobby").style.display = "block";
+      document.getElementById("roomCodeDisplay").textContent = code;
+
+      const playersRef = ref(db, `rooms/${code}/players`);
+      onValue(playersRef, (snap) => {
+        const players = snap.val();
+        const list = document.getElementById("playerList");
+        list.innerHTML = "";
+        for (let name in players) {
+          const li = document.createElement("li");
+          li.textContent = name;
+          list.appendChild(li);
+        }
+      });
+
+      const gameStateRef = ref(db, `rooms/${code}/started`);
+      onValue(gameStateRef, (snap) => {
+        if (snap.exists() && snap.val() === true) {
+          const url = `game.html?room=${code}&user=${encodeURIComponent(currentUser)}`;
+          window.location.href = url;
+        }
+      });
+
+      if (isHost) {
+        document.getElementById("startBtn").style.display = "block";
+      }
+    }
+
+    window.startGame = async () => {
+      await update(ref(db, `rooms/${currentRoom}`), { started: true });
     };
   </script>
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     button, input { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; }
-    #lobby { display: none; }
+    #lobby, #roomLobby { display: none; }
+    #startBtn { background-color: green; color: white; }
   </style>
 </head>
 <body>
@@ -71,13 +108,17 @@
     <button onclick="login()">登入</button>
   </div>
 
-  <div id="lobby">
-    <div class="card">
-      <h2>創立或加入房間</h2>
-      <button onclick="createRoom()">➕ 創立新房間</button>
-      <input type="text" id="roomCode" placeholder="輸入房間代碼">
-      <button onclick="joinRoom()">加入房間</button>
-    </div>
+  <div class="card" id="lobby">
+    <h2>歡迎，<span id="userNameDisplay"></span></h2>
+    <button onclick="createRoom()">創立房間</button>
+    <input type="text" id="roomCode" placeholder="輸入房號加入房間">
+    <button onclick="joinRoom()">加入房間</button>
+  </div>
+
+  <div class="card" id="roomLobby">
+    <h2>房間號碼：<span id="roomCodeDisplay"></span></h2>
+    <ul id="playerList"></ul>
+    <button id="startBtn" style="display:none" onclick="startGame()">✅ 開始遊戲</button>
   </div>
 </body>
 </html>
