@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>資安桌遊房間系統</title>
+  <title>資安桌遊大廳</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -47,39 +47,21 @@
       if (!code) code = document.getElementById("roomCode").value.trim();
       const roomRef = ref(db, `rooms/${code}`);
       const snapshot = await get(roomRef);
-
       if (!snapshot.exists()) return alert("房間不存在！");
 
       currentRoom = code;
-      update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
+      await update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
 
-      document.getElementById("lobby").style.display = "none";
-      document.getElementById("room").style.display = "block";
-      document.getElementById("roomNumber").textContent = code;
-
-      const playersRef = ref(db, `rooms/${code}/players`);
-      onValue(playersRef, (snap) => {
-        const players = Object.keys(snap.val() || {});
-        document.getElementById("playerList").textContent = players.join(", ");
-      });
-
-      const roomData = snapshot.val();
-      if (roomData.host === currentUser) {
-        document.getElementById("startBtn").style.display = "block";
-      }
+      // 跳轉頁面並附帶參數
+      const url = `game.html?room=${currentRoom}&user=${encodeURIComponent(currentUser)}`;
+      window.location.href = url;
     };
-
-    window.startGame = () => {
-      update(ref(db, `rooms/${currentRoom}`), { started: true });
-      alert("遊戲開始囉！（你可以轉跳到主遊戲頁）");
-    }
   </script>
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    button, input { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 1rem; }
-    #lobby, #room { display: none; }
-    #startBtn { display: none; background: green; color: white; }
+    button, input { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; }
+    #lobby { display: none; }
   </style>
 </head>
 <body>
@@ -96,12 +78,6 @@
       <input type="text" id="roomCode" placeholder="輸入房間代碼">
       <button onclick="joinRoom()">加入房間</button>
     </div>
-  </div>
-
-  <div class="card" id="room">
-    <h2>房間代碼：<span id="roomNumber"></span></h2>
-    <p>目前玩家：<span id="playerList">-</span></p>
-    <button id="startBtn" onclick="startGame()">✅ 開始遊戲</button>
   </div>
 </body>
 </html>
