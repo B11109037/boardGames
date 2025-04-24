@@ -76,8 +76,9 @@
       const startedRef = ref(db, `rooms/${code}/started`);
       onValue(startedRef, (snap) => {
         if (snap.exists() && snap.val() === true) {
-          // 🔄 跳轉至遊戲頁面並攜帶參數
-          window.location.href = `game.html?room=${code}&user=${encodeURIComponent(currentUser)}`;
+          // 🔄 跳轉至角色頁面並攜帶參數
+          window.location.href = `character-select.html?room=${roomCode}&player=${encodeURIComponent(currentUser)}`;
+
         }
       });
     };
