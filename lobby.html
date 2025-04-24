@@ -45,30 +45,41 @@
       joinRoom(roomCode);
     };
 
-    window.joinRoom = async (code = null) => {
+   window.joinRoom = async (code = null) => {
       if (!code) code = document.getElementById("roomCode").value.trim();
       const roomRef = ref(db, `rooms/${code}`);
       const snapshot = await get(roomRef);
-
+    
       if (!snapshot.exists()) return alert("房間不存在！");
-
+    
       currentRoom = code;
       await update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
-
+    
       document.getElementById("lobby").style.display = "none";
       document.getElementById("room").style.display = "block";
       document.getElementById("roomNumber").textContent = code;
-
+    
+      // ✅ 更新玩家列表
       const playersRef = ref(db, `rooms/${code}/players`);
       onValue(playersRef, (snap) => {
         const players = Object.keys(snap.val() || {});
         document.getElementById("playerList").textContent = players.join(", ");
       });
-
+    
+      // ✅ 若自己是房主，顯示開始按鈕
       const roomData = snapshot.val();
       if (roomData.host === currentUser) {
         document.getElementById("startBtn").style.display = "block";
       }
+    
+      // ✅ 所有玩家監聽遊戲是否開始
+      const startedRef = ref(db, `rooms/${code}/started`);
+      onValue(startedRef, (snap) => {
+        if (snap.exists() && snap.val() === true) {
+          // 🔄 跳轉至遊戲頁面並攜帶參數
+          window.location.href = `game.html?room=${code}&user=${encodeURIComponent(currentUser)}`;
+        }
+      });
     };
 
     window.startGame = async () => {
