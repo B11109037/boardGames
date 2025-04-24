@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>選擇角色</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, update, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
+      authDomain: "broadgame-9bc04.firebaseapp.com",
+      databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "broadgame-9bc04",
+      storageBucket: "broadgame-9bc04.appspot.com",
+      messagingSenderId: "220150025271",
+      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
+      measurementId: "G-6T9GW9LVD7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const player = urlParams.get('player');
+    const room = urlParams.get('room');
+
+    window.selectRole = async function (role) {
+      if (!player || !room) {
+        alert("缺少玩家或房間資訊");
+        return;
+      }
+      const userRef = ref(db, `rooms/${room}/players/${player}`);
+      await update(userRef, { role });
+      alert(`你已選擇角色：${role}`);
+      window.location.href = `game.html?player=${player}&room=${room}`;
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+      padding: 2rem;
+    }
+    .role-card {
+      display: inline-block;
+      width: 200px;
+      padding: 1rem;
+      margin: 1rem;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .role-card:hover {
+      border-color: #1e88e5;
+    }
+  </style>
+</head>
+<body>
+  <h2>請選擇你的角色</h2>
+  <div class="role-card" onclick="selectRole('詐騙者')">
+    <h3>詐騙者</h3>
+    <p>可以在任意回合捲走投資金。</p>
+  </div>
+  <div class="role-card" onclick="selectRole('投資客')">
+    <h3>投資客</h3>
+    <p>每回合獲得 10% 的穩定收益。</p>
+  </div>
+  <div class="role-card" onclick="selectRole('普通人')">
+    <h3>普通人</h3>
+    <p>自由選擇是否投資及建造。</p>
+  </div>
+</body>
+</html>
