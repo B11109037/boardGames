@@ -1,4 +1,6 @@
 // roleActions.js
+
+//✅ 角色的頁面顯示
 import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 const db = getDatabase();
