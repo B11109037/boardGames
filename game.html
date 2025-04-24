@@ -7,13 +7,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from './components/roleActions.js';//>✅ 加入遊戲角色選擇
-    const url = new URLSearchParams(window.location.search);
-      const player = url.get('player');
-      const room = url.get('room');
-  
-    renderRoleUI(player, room);
-    
+    import { renderRoleUI } from './components/roleActions.js';
+
+    // ✅ Firebase 初始化
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
       authDomain: "broadgame-9bc04.firebaseapp.com",
@@ -24,30 +20,36 @@
       appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
       measurementId: "G-6T9GW9LVD7"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getDatabase();
 
+    // ✅ URL 參數
     const urlParams = new URLSearchParams(window.location.search);
     const currentRoom = urlParams.get('room');
-    const currentUser = urlParams.get('user');
+    const currentUser = urlParams.get('player');
 
-    document.getElementById("playerName").textContent = currentUser;
+    // ✅ 玩家名稱顯示
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("playerName").textContent = currentUser;
+    });
 
-    const userRef = ref(db, `users/${currentUser}`);
+    // ✅ 初始金額設定
+    const userRef = ref(db, `rooms/${currentRoom}/players/${currentUser}`);
     get(userRef).then(snapshot => {
       if (!snapshot.exists()) {
         set(userRef, { money: 100 });
       }
     });
 
-    const moneyRef = ref(db, `users/${currentUser}/money`);
+    // ✅ 監聽金額變化
+    const moneyRef = ref(db, `rooms/${currentRoom}/players/${currentUser}/money`);
     onValue(moneyRef, (snap) => {
       document.getElementById("money").textContent = `$${snap.val()}`;
     });
 
-    const usersRef = ref(db, "users");
-    onValue(usersRef, (snap) => {
+    // ✅ 顯示投資對象
+    const allPlayersRef = ref(db, `rooms/${currentRoom}/players`);
+    onValue(allPlayersRef, (snap) => {
       const all = snap.val();
       const target = document.getElementById("target");
       target.innerHTML = "";
@@ -61,6 +63,7 @@
       }
     });
 
+    // ✅ 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
@@ -71,22 +74,27 @@
         return;
       }
 
-      const userRef = ref(db, `users/${currentUser}/money`);
-      const snapshot = await get(userRef);
-      const balance = snapshot.val();
+      const userSnap = await get(ref(db, `rooms/${currentRoom}/players/${currentUser}/money`));
+      const balance = userSnap.val();
       if (amount > balance) {
         status.textContent = "你的錢不夠啦！";
         return;
       }
 
-      await update(ref(db, `users/${currentUser}`), { money: balance - amount });
-      const targetRef = ref(db, `users/${target}/money`);
+      // 更新投資金額
+      await update(ref(db, `rooms/${currentRoom}/players/${currentUser}`), { money: balance - amount });
+      const targetRef = ref(db, `rooms/${currentRoom}/players/${target}`);
       const targetSnap = await get(targetRef);
-      const targetMoney = targetSnap.exists() ? targetSnap.val() : 0;
-      await update(ref(db, `users/${target}`), { money: targetMoney + amount });
-      status.textContent = `✅ 成功投資 ${target} $${amount}`;
-    };
+      const targetMoney = targetSnap.exists() ? targetSnap.val().money : 0;
+      await update(targetRef, {
+        money: targetMoney + amount,
+        [`investors/${currentUser}`]: amount
+      });
 
+      status.textContent = `✅ 成功投資 ${target} $${amount}`;
+    }
+
+    // ✅ 渲染角色功能
     renderRoleUI(currentUser, currentRoom);
   </script>
   <style>
