@@ -90,12 +90,23 @@
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     button, input, select { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
   </style>
+  <script type="module">
+    import { renderRoleUI } from './components/roleActions.js';
+  
+    const url = new URLSearchParams(window.location.search);
+    const player = url.get('player');
+    const room = url.get('room');
+  
+    renderRoleUI(player, room);
+  </script>
+
 </head>
 <body>
   <div class="card">
     <h2>玩家：<span id="playerName"></span></h2>
     <p>💰 我的餘額：<strong id="money">$0</strong></p>
   </div>
+    <div id="roleActions"></div>
 
   <div class="card">
     <h3>我要投資：</h3>
