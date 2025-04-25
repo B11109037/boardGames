@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>角色動作頁面</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>角色驗證頁面</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -29,70 +29,77 @@
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("playerName").textContent = player;
 
-      const playerRef = ref(db, `rooms/${room}/players/${player}`);
       const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      
-      // 設定初始金額（若尚未有）
-      get(moneyRef).then(snap => {
-        if (!snap.exists()) {
-          set(moneyRef, 100);
-        }
+      onValue(moneyRef, (snap) => {
+        const money = snap.val();
+        document.getElementById("money").textContent = money !== null ? `$${money}` : "$0";
       });
 
-      // 監聽金額變化
-      onValue(moneyRef, snap => {
-        document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
-      });
-
-      // 取得角色並顯示角色操作介面
       const roleRef = ref(db, `rooms/${room}/players/${player}/role`);
       const roleSnap = await get(roleRef);
       if (roleSnap.exists()) {
         const role = roleSnap.val();
         document.getElementById("role").textContent = `角色：${role}`;
-        renderRolePanel(role);
+
+        const featureDiv = document.getElementById("features");
+
+        if (role === "詐騙者") {
+          featureDiv.innerHTML = `
+            <div class="card">
+              <h3>詐騙者功能</h3>
+              <p>可以捲款或分配金額。</p>
+              <button>🧨 一鍵捲款</button>
+              <button>📤 分配金額</button>
+            </div>
+          `;
+        } else if (role === "投資客") {
+          featureDiv.innerHTML = `
+            <div class="card">
+              <h3>投資客功能</h3>
+              <p>可以分配金額給投資人。</p>
+              <button>📤 分配金額</button>
+            </div>
+          `;
+        } else if (role === "普通人") {
+          featureDiv.innerHTML = `
+            <div class="card">
+              <h3>普通人功能</h3>
+              <p>可以查看誰分配金額給你（展示用）。</p>
+              <ul>
+                <li>Rick 分你 $20</li>
+                <li>Alan 分你 $10</li>
+              </ul>
+            </div>
+          `;
+        }
       } else {
         document.getElementById("role").textContent = "❌ 無法讀取角色資訊";
       }
     });
-
-    function renderRolePanel(role) {
-      const panel = document.getElementById("rolePanel");
-      if (role === "詐騙者") {
-        panel.innerHTML = `
-          <h4>詐騙者功能</h4>
-          <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
-          <button>🧨 一鍵捲款</button>
-        `;
-      } else if (role === "投資客") {
-        panel.innerHTML = `
-          <h4>投資客功能</h4>
-          <p>收集投資並可分配回報。</p>
-          <button>📤 分配利潤</button>
-        `;
-      } else if (role === "普通人") {
-        panel.innerHTML = `
-          <h4>普通人功能</h4>
-          <p>可以選擇是否投資或建造。</p>
-          <button>💰 進行投資</button>
-        `;
-      }
-    }
   </script>
   <style>
     body {
       font-family: sans-serif;
-      background: #f0f0f0;
-      padding: 1rem;
-      max-width: 500px;
+      padding: 1.5rem;
+      max-width: 480px;
       margin: auto;
+      background: #f9f9f9;
     }
     .card {
-      background: #fff;
-      padding: 1.2rem;
+      background: white;
+      padding: 1rem;
       margin-bottom: 1rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 0.6rem 1rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      background-color: #f0f0f0;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -102,8 +109,6 @@
     <p>💰 餘額：<strong id="money">$0</strong></p>
     <p id="role">角色：載入中...</p>
   </div>
-  <div class="card" id="rolePanel">
-    <p>正在載入角色功能...</p>
-  </div>
+  <div id="features"></div>
 </body>
 </html>
