@@ -24,7 +24,6 @@
 
     let currentUser = "";
     let currentRoom = "";
-    let isHost = false;
 
     window.login = () => {
       const name = document.getElementById("nickname").value.trim();
@@ -41,131 +40,51 @@
         players: { [currentUser]: true },
         started: false
       });
-      isHost = true;
+      currentRoom = roomCode;
       joinRoom(roomCode);
     };
 
-   window.joinRoom = async (code = null) => {
+    window.joinRoom = async (code = null) => {
       if (!code) code = document.getElementById("roomCode").value.trim();
       const roomRef = ref(db, `rooms/${code}`);
       const snapshot = await get(roomRef);
-    
       if (!snapshot.exists()) return alert("房間不存在！");
-    
+
       currentRoom = code;
       await update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
-    
+
       document.getElementById("lobby").style.display = "none";
       document.getElementById("room").style.display = "block";
       document.getElementById("roomNumber").textContent = code;
-    
-      // ✅ 更新玩家列表
+
       const playersRef = ref(db, `rooms/${code}/players`);
       onValue(playersRef, (snap) => {
         const players = Object.keys(snap.val() || {});
         document.getElementById("playerList").textContent = players.join(", ");
       });
-    
-      // ✅ 若自己是房主，顯示開始按鈕
+
       const roomData = snapshot.val();
       if (roomData.host === currentUser) {
         document.getElementById("startBtn").style.display = "block";
       }
-    
-      // ✅ 所有玩家監聽遊戲是否開始
+
       const startedRef = ref(db, `rooms/${code}/started`);
       onValue(startedRef, (snap) => {
         if (snap.exists() && snap.val() === true) {
-          // 🔄 跳轉至角色頁面並攜帶參數
-          window.location.href = `character-select.html?room=${roomCode}&player=${encodeURIComponent(currentUser)}`;
-
+          window.location.href = `character-select.html?room=${currentRoom}&player=${encodeURIComponent(currentUser)}`;
         }
       });
     };
 
     window.startGame = async () => {
       await update(ref(db, `rooms/${currentRoom}`), { started: true });
-      alert("遊戲開始囉！進入主遊戲畫面");
-      launchMainGame();
-    };
-
-    function launchMainGame() {
-      document.getElementById("room").style.display = "none";
-      document.getElementById("main").style.display = "block";
-      document.getElementById("playerName").textContent = currentUser;
-      setupGame(currentUser);
-    }
-
-    function setupGame(name) {
-      const userRef = ref(db, `users/${name}`);
-      get(userRef).then(snapshot => {
-        if (!snapshot.exists()) {
-          set(userRef, { money: 100 });
-        }
-        listenToBalance();
-        listenToPlayers();
-      });
-    }
-
-    function listenToBalance() {
-      const moneyRef = ref(db, `users/${currentUser}/money`);
-      onValue(moneyRef, (snapshot) => {
-        document.getElementById("money").textContent = `$${snapshot.val()}`;
-      });
-    }
-
-    function listenToPlayers() {
-      const usersRef = ref(db, "users");
-      onValue(usersRef, (snapshot) => {
-        const players = snapshot.val();
-        const targetSelect = document.getElementById("target");
-        targetSelect.innerHTML = "";
-
-        for (let name in players) {
-          if (name !== currentUser) {
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            targetSelect.appendChild(opt);
-          }
-        }
-      });
-    }
-
-    window.invest = async function () {
-      const target = document.getElementById("target").value;
-      const amount = parseInt(document.getElementById("amount").value);
-      const status = document.getElementById("status");
-
-      if (!target || isNaN(amount) || amount <= 0) {
-        status.textContent = "請選擇對象並輸入有效金額。";
-        return;
-      }
-
-      const userRef = ref(db, `users/${currentUser}/money`);
-      const snapshot = await get(userRef);
-      const currentMoney = snapshot.val();
-
-      if (amount > currentMoney) {
-        status.textContent = "你的錢不夠啦！";
-        return;
-      }
-
-      await update(ref(db, `users/${currentUser}`), { money: currentMoney - amount });
-
-      const targetRef = ref(db, `users/${target}/money`);
-      const targetSnap = await get(targetRef);
-      const targetMoney = targetSnap.exists() ? targetSnap.val() : 0;
-
-      await update(ref(db, `users/${target}`), { money: targetMoney + amount });
-      status.textContent = `✅ 你已成功投資 ${target} $${amount}`;
     };
   </script>
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     button, input, select { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
-    #lobby, #room, #main { display: none; }
+    #lobby, #room { display: none; }
     #startBtn { display: none; background: green; color: white; }
   </style>
 </head>
@@ -189,18 +108,6 @@
     <h2>房間代碼：<span id="roomNumber"></span></h2>
     <p>目前玩家：<span id="playerList">-</span></p>
     <button id="startBtn" onclick="startGame()">✅ 開始遊戲</button>
-  </div>
-
-  <div class="card" id="main">
-    <h2>玩家：<span id="playerName"></span></h2>
-    <p>💰 我的餘額：<strong id="money">$0</strong></p>
-    <h3>我要投資：</h3>
-    <label for="target">選擇對象：</label>
-    <select id="target"></select>
-    <label for="amount">投資金額：</label>
-    <input type="number" id="amount" placeholder="輸入金額，如20" min="1" />
-    <button onclick="invest()">確認投資</button>
-    <p id="status"></p>
   </div>
 </body>
 </html>
