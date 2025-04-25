@@ -51,12 +51,12 @@
           div.innerHTML = `
             <h3>${role}功能</h3>
             <p>可使用下列功能：</p>
-            <button>📤 分配金額</button>
-            ${role === "詐騙者" ? '<button>🧨 一鍵捲款</button>' : ""}
             <div style="margin-top: 1rem;">
               <h4>有誰投資你？</h4>
               <ul><li>展示：Alan 投資 $30</li><li>展示：Rick 投資 $50</li></ul>
             </div>
+            <button>📤 分配金額</button>
+            ${role === "詐騙者" ? '<button>🧨 一鍵捲款</button>' : ""} 
           `;
           actions.appendChild(div);
         } else if (role === "普通人") {
