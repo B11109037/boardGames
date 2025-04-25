@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>角色驗證頁面</title>
+  <title>資安桌遊主畫面</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
@@ -38,39 +38,40 @@
       const roleRef = ref(db, `rooms/${room}/players/${player}/role`);
       const roleSnap = await get(roleRef);
       if (roleSnap.exists()) {
-        const role = roleSnap.val();
+        let role = roleSnap.val();
+        if (role === "投資客") role = "投資代理人"; // ✅ 更名為投資代理人
         document.getElementById("role").textContent = `角色：${role}`;
 
-        const featureDiv = document.getElementById("features");
+        const actions = document.getElementById("roleActions");
+        actions.innerHTML = "";
 
-        if (role === "詐騙者") {
-          featureDiv.innerHTML = `
-            <div class="card">
-              <h3>詐騙者功能</h3>
-              <p>可以捲款或分配金額。</p>
-              <button>🧨 一鍵捲款</button>
-              <button>📤 分配金額</button>
+        if (role === "詐騙者" || role === "投資代理人") {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>${role}功能</h3>
+            <p>可使用下列功能：</p>
+            <button>📤 分配金額</button>
+            ${role === "詐騙者" ? '<button>🧨 一鍵捲款</button>' : ""}
+            <div style="margin-top: 1rem;">
+              <h4>有誰投資你？</h4>
+              <ul><li>展示：Alan 投資 $30</li><li>展示：Rick 投資 $50</li></ul>
             </div>
           `;
-        } else if (role === "投資代理人") {
-          featureDiv.innerHTML = `
-            <div class="card">
-              <h3>投資代理人功能</h3>
-              <p>可以分配金額給投資人。</p>
-              <button>📤 分配金額</button>
-            </div>
-          `;
+          actions.appendChild(div);
         } else if (role === "普通人") {
-          featureDiv.innerHTML = `
-            <div class="card">
-              <h3>普通人功能</h3>
-              <p>可以查看誰分配金額給你（展示用）。</p>
-              <ul>
-                <li>Rick 分你 $20</li>
-                <li>Alan 分你 $10</li>
-              </ul>
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>普通人功能</h3>
+            <p>可以選擇是否投資或建造。</p>
+            <button>💰 進行投資</button>
+            <div style="margin-top: 1rem;">
+              <h4>有誰分錢給你？</h4>
+              <ul><li>展示：Alan 分你 $20</li><li>展示：Leo 分你 $10</li></ul>
             </div>
           `;
+          actions.appendChild(div);
         }
       } else {
         document.getElementById("role").textContent = "❌ 無法讀取角色資訊";
@@ -92,15 +93,6 @@
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    button {
-      padding: 0.6rem 1rem;
-      margin-top: 0.5rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 5px;
-      background-color: #f0f0f0;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -109,6 +101,7 @@
     <p>💰 餘額：<strong id="money">$0</strong></p>
     <p id="role">角色：載入中...</p>
   </div>
-  <div id="features"></div>
+
+  <div id="roleActions"></div>
 </body>
 </html>
