@@ -62,28 +62,28 @@
   if (role === "詐騙者") {
     panel.innerHTML = `
       <h4>詐騙者功能</h4>
-      <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
-      <button>🧨 一鍵捲款</button>
-      <button>📤 分配金額給他人</button>
-      <hr />
       <p>💰 以下是投資你的人（樣板資料）：</p>
       <ul>
         <li>Alan 投資了 $50</li>
         <li>Betty 投資了 $30</li>
       </ul>
+      <hr />
+      <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
+      <button>🧨 一鍵捲款</button>
+      <button>📤 分配金額給他人</button>
     `;
   } else if (role === "投資代理人") {
     panel.innerHTML = `
       <h4>投資代理人功能</h4>
-      <p>收集投資並可分配回報。</p>
-      <button>📤 分配利潤</button>
-      <button>📤 分配金額給他人</button>
-      <hr />
       <p>💰 以下是投資你的人（樣板資料）：</p>
       <ul>
         <li>Alan 投資了 $40</li>
         <li>Cindy 投資了 $20</li>
       </ul>
+      <hr />
+            <p>收集投資並可分配回報。</p>
+      <button>📤 分配利潤</button>
+      <button>📤 分配金額給他人</button>
     `;
   } else if (role === "普通人") {
     panel.innerHTML = `
