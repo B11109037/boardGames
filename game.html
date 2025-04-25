@@ -69,8 +69,10 @@
       </ul>
       <hr />
       <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
+      <button>📤 投資</button>
       <button>🧨 一鍵捲款</button>
       <button>📤 分配金額給他人</button>
+      <button>📤 結束動作</button>
     `;
   } else if (role === "投資代理人") {
     panel.innerHTML = `
@@ -82,8 +84,9 @@
       </ul>
       <hr />
             <p>收集投資並可分配回報。</p>
-      <button>📤 分配利潤</button>
+      <button>📤 投資</button>
       <button>📤 分配金額給他人</button>
+      <button>📤 結束動作</button>
     `;
   } else if (role === "普通人") {
     panel.innerHTML = `
@@ -96,6 +99,7 @@
       <hr />
       <p>可以選擇是否投資或建造。</p>
       <button>💰 進行投資</button>
+       <button>📤 結束動作</button>
     `;
   }
 }
