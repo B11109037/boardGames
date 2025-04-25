@@ -4,60 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>資安桌遊主畫面</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      max-width: 480px;
-      margin: auto;
-      background: #f4f4f4;
-    }
-    .card {
-      background: white;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    button, input, select {
-      width: 100%;
-      padding: 0.8rem;
-      font-size: 1rem;
-      margin-top: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-  </style>
-</head>
-<body>
-  <!-- 玩家基本資訊 -->
-  <div class="card">
-    <h2>玩家：<span id="playerName"></span></h2>
-    <p>💰 我的餘額：<strong id="money">$0</strong></p>
-  </div>
-
-  <!-- 動態角色專屬操作區塊 -->
-  <div id="roleActions" class="card"></div>
-
-  <!-- 所有人通用的投資功能 -->
-  <div class="card">
-    <h3>我要投資：</h3>
-    <label for="target">選擇對象：</label>
-    <select id="target"></select>
-
-    <label for="amount">投資金額：</label>
-    <input type="number" id="amount" placeholder="輸入金額，如20" min="1" />
-
-    <button onclick="invest()">確認投資</button>
-    <p id="status"></p>
-  </div>
-
-  <!-- 🔧 邏輯腳本 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
     import { renderRoleUI } from './components/roleActions.js';
 
-    // ✅ Firebase 初始化
+    // Firebase 初始化
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
       authDomain: "broadgame-9bc04.firebaseapp.com",
@@ -71,45 +23,46 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase();
 
-    // ✅ 擷取 URL 參數
     const urlParams = new URLSearchParams(window.location.search);
     const currentRoom = urlParams.get('room');
     const currentUser = urlParams.get('player');
 
-    // ✅ 顯示玩家暱稱
-    document.getElementById("playerName").textContent = currentUser;
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("playerName").textContent = currentUser;
 
-    // ✅ 初始化玩家金額
-    const userRef = ref(db, `rooms/${currentRoom}/players/${currentUser}`);
-    get(userRef).then(snapshot => {
-      if (!snapshot.exists()) {
-        set(userRef, { money: 100 });
+      // 初始化金額（如果不存在）
+      const moneyRef = ref(db, `rooms/${currentRoom}/players/${currentUser}/money`);
+      const moneySnap = await get(moneyRef);
+      if (!moneySnap.exists()) {
+        await update(ref(db, `rooms/${currentRoom}/players/${currentUser}`), { money: 100 });
       }
-    });
 
-    // ✅ 金額即時監聽
-    const moneyRef = ref(db, `rooms/${currentRoom}/players/${currentUser}/money`);
-    onValue(moneyRef, (snap) => {
-      document.getElementById("money").textContent = `$${snap.val() || 0}`;
-    });
+      // 顯示金額
+      onValue(moneyRef, (snap) => {
+        document.getElementById("money").textContent = `$${snap.val()}`;
+      });
 
-    // ✅ 取得其他投資對象名單（排除自己）
-    const allPlayersRef = ref(db, `rooms/${currentRoom}/players`);
-    onValue(allPlayersRef, (snap) => {
-      const all = snap.val();
-      const target = document.getElementById("target");
-      target.innerHTML = "";
-      for (let name in all) {
-        if (name !== currentUser) {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          target.appendChild(opt);
+      // 監聽玩家列表，設定投資選單
+      const allPlayersRef = ref(db, `rooms/${currentRoom}/players`);
+      onValue(allPlayersRef, (snap) => {
+        const all = snap.val();
+        const target = document.getElementById("target");
+        target.innerHTML = "";
+        for (let name in all) {
+          if (name !== currentUser) {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            target.appendChild(opt);
+          }
         }
-      }
+      });
+
+      // 渲染角色專屬功能
+      renderRoleUI(currentUser, currentRoom);
     });
 
-    // ✅ 投資功能
+    // 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
@@ -121,31 +74,50 @@
       }
 
       const userMoneySnap = await get(ref(db, `rooms/${currentRoom}/players/${currentUser}/money`));
-      const balance = userMoneySnap.val() || 0;
+      const balance = userMoneySnap.val();
       if (amount > balance) {
         status.textContent = "你的錢不夠啦！";
         return;
       }
 
-      // ✅ 扣除自己金額
       await update(ref(db, `rooms/${currentRoom}/players/${currentUser}`), { money: balance - amount });
 
-      // ✅ 加到目標玩家帳戶 + 投資記錄
       const targetRef = ref(db, `rooms/${currentRoom}/players/${target}`);
       const targetSnap = await get(targetRef);
-      const targetMoney = targetSnap.exists() ? targetSnap.val().money : 0;
-      const previousInvestment = (targetSnap.val()?.investors?.[currentUser]) || 0;
+      const targetMoney = targetSnap.exists() ? targetSnap.val().money || 0 : 0;
 
       await update(targetRef, {
         money: targetMoney + amount,
-        [`investors/${currentUser}`]: previousInvestment + amount
+        [`investors/${currentUser}`]: amount
       });
 
       status.textContent = `✅ 成功投資 ${target} $${amount}`;
     }
-
-    // ✅ 顯示角色專屬介面
-    renderRoleUI(currentUser, currentRoom);
   </script>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
+    .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    button, input, select { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>玩家：<span id="playerName"></span></h2>
+    <p>💰 我的餘額：<strong id="money">$0</strong></p>
+  </div>
+
+  <div id="roleActions"></div>
+
+  <div class="card">
+    <h3>我要投資：</h3>
+    <label for="target">選擇對象：</label>
+    <select id="target"></select>
+
+    <label for="amount">投資金額：</label>
+    <input type="number" id="amount" placeholder="輸入金額，如20" min="1" />
+
+    <button onclick="invest()">確認投資</button>
+    <p id="status"></p>
+  </div>
 </body>
 </html>
