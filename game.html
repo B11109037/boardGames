@@ -57,49 +57,27 @@
     });
 
     function renderRolePanel(role) {
-  const panel = document.getElementById("rolePanel");
-
-  if (role === "詐騙者") {
-    panel.innerHTML = `
-      <h4>詐騙者功能</h4>
-      <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
-      <button>🧨 一鍵捲款</button>
-      <button>📤 分配金額給他人</button>
-      <hr />
-      <p>💰 以下是投資你的人（樣板資料）：</p>
-      <ul>
-        <li>Alan 投資了 $50</li>
-        <li>Betty 投資了 $30</li>
-      </ul>
-    `;
-  } else if (role === "投資代理人") {
-    panel.innerHTML = `
-      <h4>投資代理人功能</h4>
-      <p>收集投資並可分配回報。</p>
-      <button>📤 分配利潤</button>
-      <button>📤 分配金額給他人</button>
-      <hr />
-      <p>💰 以下是投資你的人（樣板資料）：</p>
-      <ul>
-        <li>Alan 投資了 $40</li>
-        <li>Cindy 投資了 $20</li>
-      </ul>
-    `;
-  } else if (role === "普通人") {
-    panel.innerHTML = `
-      <h4>普通人功能</h4>
-      <p>可以選擇是否投資或建造。</p>
-      <button>💰 進行投資</button>
-      <hr />
-      <p>💰 以下是分給你的錢（樣板資料）：</p>
-      <ul>
-        <li>詐騙者 Han 分你 $10</li>
-        <li>投資代理人 Rick 分你 $5</li>
-      </ul>
-    `;
-  }
-}
-
+      const panel = document.getElementById("rolePanel");
+      if (role === "詐騙者") {
+        panel.innerHTML = `
+          <h4>詐騙者功能</h4>
+          <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
+          <button>🧨 一鍵捲款</button>
+        `;
+      } else if (role === "投資代理人") {
+        panel.innerHTML = `
+          <h4>投資代理人功能</h4>
+          <p>收集投資並可分配回報。</p>
+          <button>📤 分配利潤</button>
+        `;
+      } else if (role === "普通人") {
+        panel.innerHTML = `
+          <h4>普通人功能</h4>
+          <p>可以選擇是否投資或建造。</p>
+          <button>💰 進行投資</button>
+        `;
+      }
+    }
   </script>
   <style>
     body {
