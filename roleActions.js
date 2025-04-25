@@ -14,7 +14,7 @@ export async function renderRoleUI(playerName, roomCode) {
   const container = document.getElementById("roleActions");
   container.innerHTML = `<h3>角色：${role}</h3>`;
 
-  if (role === "詐騙者" || role === "投資客") {
+  if (role === "詐騙者" || role === "投資代理人") {
     renderInvestorList(playerName, roomCode, container);
   } else if (role === "普通人") {
     renderInvestmentHistory(playerName, roomCode, container);
