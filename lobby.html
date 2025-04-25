@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>資安桌遊房間系統</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
@@ -24,7 +24,9 @@
 
     let currentUser = "";
     let currentRoom = "";
+    let isHost = false;
 
+    // 登入
     window.login = () => {
       const name = document.getElementById("nickname").value.trim();
       if (!name) return alert("請輸入暱稱！");
@@ -33,6 +35,7 @@
       document.getElementById("lobby").style.display = "block";
     };
 
+    // 創立房間
     window.createRoom = async () => {
       const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
       await set(ref(db, `rooms/${roomCode}`), {
@@ -40,22 +43,24 @@
         players: { [currentUser]: true },
         started: false
       });
+      isHost = true;
       currentRoom = roomCode;
-      joinRoom(roomCode);
+      joinRoom(roomCode); // 自動加入
     };
 
+    // 加入房間
     window.joinRoom = async (code = null) => {
       if (!code) code = document.getElementById("roomCode").value.trim();
       const roomRef = ref(db, `rooms/${code}`);
       const snapshot = await get(roomRef);
       if (!snapshot.exists()) return alert("房間不存在！");
-
       currentRoom = code;
+
       await update(ref(db, `rooms/${code}/players`), { [currentUser]: true });
 
       document.getElementById("lobby").style.display = "none";
       document.getElementById("room").style.display = "block";
-      document.getElementById("roomNumber").textContent = code;
+      document.getElementById("roomNumber").textContent = currentRoom;
 
       const playersRef = ref(db, `rooms/${code}/players`);
       onValue(playersRef, (snap) => {
@@ -71,42 +76,47 @@
       const startedRef = ref(db, `rooms/${code}/started`);
       onValue(startedRef, (snap) => {
         if (snap.exists() && snap.val() === true) {
+          // 正確帶參數跳轉角色選擇畫面
           window.location.href = `character-select.html?room=${currentRoom}&player=${encodeURIComponent(currentUser)}`;
         }
       });
     };
 
+    // 房主點開始
     window.startGame = async () => {
       await update(ref(db, `rooms/${currentRoom}`), { started: true });
+      alert("✅ 遊戲開始！跳轉至角色選擇畫面...");
     };
   </script>
+
   <style>
     body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; background: #f4f4f4; }
     .card { background: white; padding: 1.2rem; margin-bottom: 1rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    button, input, select { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    button, input { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; }
     #lobby, #room { display: none; }
-    #startBtn { display: none; background: green; color: white; }
+    #startBtn { background-color: green; color: white; }
   </style>
 </head>
 <body>
+  <!-- 登入 -->
   <div class="card" id="login">
     <h2>輸入暱稱</h2>
-    <input type="text" id="nickname" placeholder="輸入暱稱">
+    <input type="text" id="nickname" placeholder="例如：Alan" />
     <button onclick="login()">登入</button>
   </div>
 
-  <div id="lobby">
-    <div class="card">
-      <h2>創立或加入房間</h2>
-      <button onclick="createRoom()">➕ 創立新房間</button>
-      <input type="text" id="roomCode" placeholder="輸入房間代碼">
-      <button onclick="joinRoom()">加入房間</button>
-    </div>
+  <!-- 建立 / 加入房間 -->
+  <div class="card" id="lobby">
+    <h2>創立或加入房間</h2>
+    <button onclick="createRoom()">➕ 創立新房間</button>
+    <input type="text" id="roomCode" placeholder="輸入房間代碼" />
+    <button onclick="joinRoom()">加入房間</button>
   </div>
 
+  <!-- 房間等待畫面 -->
   <div class="card" id="room">
     <h2>房間代碼：<span id="roomNumber"></span></h2>
-    <p>目前玩家：<span id="playerList">-</span></p>
+    <p>玩家列表：<span id="playerList">-</span></p>
     <button id="startBtn" onclick="startGame()">✅ 開始遊戲</button>
   </div>
 </body>
