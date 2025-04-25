@@ -6,7 +6,7 @@
   <title>選擇角色</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, update, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -31,10 +31,15 @@
         alert("缺少玩家或房間資訊");
         return;
       }
-      const userRef = ref(db, `rooms/${room}/players/${player}`);
-      await update(userRef, { role });
-      alert(`你已選擇角色：${role}`);
-      window.location.href = `game.html?player=${player}&room=${room}`;
+      try {
+        const userRef = ref(db, `rooms/${room}/players/${player}`);
+        await update(userRef, { role });
+        alert(`你已選擇角色：${role}`);
+        window.location.href = `game.html?player=${player}&room=${room}`;
+      } catch (err) {
+        console.error("選擇角色失敗：", err);
+        alert("無法儲存角色資料，請稍後再試！");
+      }
     }
   </script>
   <style>
@@ -68,11 +73,11 @@
   </div>
   <div class="role-card" onclick="selectRole('投資客')">
     <h3>投資客</h3>
-    <p>每回合獲得 10% 的穩定收益。</p>
+    <p>可以收集投資並分配回報。</p>
   </div>
   <div class="role-card" onclick="selectRole('普通人')">
     <h3>普通人</h3>
-    <p>自由選擇是否投資及建造。</p>
+    <p>自由選擇是否投資與建造。</p>
   </div>
 </body>
 </html>
