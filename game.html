@@ -33,7 +33,7 @@
       const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       get(moneyRef).then(async snap => {
         if (!snap.exists()) {
-          await set(moneyRef, 100);//初始化金錢
+          await set(moneyRef, 100);
         }
         onValue(moneyRef, snap => {
           document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
@@ -41,13 +41,14 @@
       });
 
       renderRoleUI(player, room);
+      loadMyInvestments();
 
-      // 🔥 自動載入投資對象名單（排除自己）
+      // 🔥 自動載入投資對象名單
       const playersRef = ref(db, `rooms/${room}/players`);
       onValue(playersRef, (snap) => {
         const players = snap.val() || {};
         const targetSelect = document.getElementById("target");
-        const status = document.getElementById("targetStatus");
+        const targetStatus = document.getElementById("targetStatus");
         targetSelect.innerHTML = "";
         let hasTarget = false;
 
@@ -63,9 +64,9 @@
 
         if (!hasTarget) {
           targetSelect.innerHTML = `<option disabled selected>無可投資對象</option>`;
-          status.textContent = "⚠️ 目前房間內沒有其他可投資對象";
+          targetStatus.textContent = "⚠️ 目前房間內沒有其他可投資對象";
         } else {
-          status.textContent = "";
+          targetStatus.textContent = "";
         }
       });
     });
@@ -74,23 +75,26 @@
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
-      const status = document.getElementById("status");
+      const investStatus = document.getElementById("investStatus");
 
       if (!target || isNaN(amount) || amount <= 0) {
-        status.textContent = "請輸入正確金額與選擇投資對象";
+        investStatus.textContent = "請輸入正確金額與選擇投資對象";
         return;
       }
 
       const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       const mySnap = await get(myMoneyRef);
-      const myMoney = mySnap.val() || 0;
+      const myData = mySnap.val() || {};
 
-      if (amount > myMoney) {
-        status.textContent = "💸 餘額不足！";
+      if (amount > (myData.money || 0)) {
+        investStatus.textContent = "💸 餘額不足！";
         return;
       }
 
-      await update(ref(db, `rooms/${room}/players/${player}`), { money: myMoney - amount });
+      await update(ref(db, `rooms/${room}/players/${player}`), {
+        money: (myData.money || 0) - amount,
+        [`myInvestments/${target}`]: (myData.myInvestments?.[target] || 0) + amount
+      });
 
       const targetRef = ref(db, `rooms/${room}/players/${target}`);
       const targetSnap = await get(targetRef);
@@ -101,9 +105,39 @@
         [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
       });
 
-      status.textContent = `✅ 成功投資 ${target} $${amount}`;
+      // 投資成功後，重新載入投資紀錄
+      loadMyInvestments();
+
+      investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
+    }
+
+    // ✅ 載入自己的投資紀錄
+    function loadMyInvestments() {
+      const myInvestmentsRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
+      onValue(myInvestmentsRef, snap => {
+        const investments = snap.val() || {};
+        const investmentList = document.getElementById("investmentList");
+
+        investmentList.innerHTML = "";
+
+        if (Object.keys(investments).length === 0) {
+          investmentList.innerHTML = "<p>⚠️ 尚未有投資紀錄</p>";
+          return;
+        }
+
+        for (let target in investments) {
+          const card = document.createElement("div");
+          card.className = "investment-card";
+          card.innerHTML = `
+            <p><strong>對象：</strong> ${target}</p>
+            <p><strong>累積金額：</strong> $${investments[target]}</p>
+          `;
+          investmentList.appendChild(card);
+        }
+      });
     }
   </script>
+  
   <style>
     body {
       font-family: sans-serif;
@@ -119,25 +153,48 @@
       border-radius: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
+    .investment-card {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #investmentList p {
+      margin: 0.5rem 0;
+    }
   </style>
 </head>
+
 <body>
   <div class="card">
     <h2>玩家：<span id="playerName">載入中...</span></h2>
     <p>💰 餘額：<strong id="money">$0</strong></p>
+    <p id="role">角色：載入中...</p>
   </div>
+
   <div class="card" id="rolePanel">
     <p>正在載入角色資訊...</p>
   </div>
+
   <div class="card" id="investPanel">
     <h3>我要投資：</h3>
     <label for="target">選擇對象：</label>
     <select id="target"></select>
     <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
+
     <label for="amount">投資金額：</label>
     <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
     <button onclick="invest()">確認投資</button>
-    <p id="status"></p>
+    <p id="investStatus"></p>
+  </div>
+
+  <div class="card" id="investmentHistory">
+    <h3>我的投資紀錄：</h3>
+    <div id="investmentList">
+      <p>尚未有投資紀錄</p>
+    </div>
   </div>
 </body>
 </html>
