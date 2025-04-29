@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from "./roleActions.js"; //✅ 正確匯入
+   
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -22,7 +22,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase();
-
+    
+    import { renderRoleUI } from "./roleActions.js"; //✅ 正確匯入
+    
     const urlParams = new URLSearchParams(window.location.search);
     const player = urlParams.get("player");
     const room = urlParams.get("room");
