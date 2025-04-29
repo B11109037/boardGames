@@ -6,11 +6,9 @@
   <title>角色桌遊主頁面</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";//加入資料庫
-    import { setupInvestUI } from "./roleActions.js";
+    import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { renderRoleUI } from "./components/roleActions.js"; //✅ 正確匯入
 
-
- 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
       authDomain: "broadgame-9bc04.firebaseapp.com",
@@ -35,7 +33,7 @@
       const playerRef = ref(db, `rooms/${room}/players/${player}`);
       const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       
-      // 設定初始金額（若尚未有）
+      // 設定初始金額
       get(moneyRef).then(snap => {
         if (!snap.exists()) {
           set(moneyRef, 100);
@@ -47,18 +45,11 @@
         document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
       });
 
-      // 取得角色並顯示角色操作介面
-      const roleRef = ref(db, `rooms/${room}/players/${player}/role`);
-      const roleSnap = await get(roleRef);
-      if (roleSnap.exists()) {
-        const role = roleSnap.val();
-        document.getElementById("role").textContent = `角色：${role}`;
-        renderRoleUI(player, room);  //✅載入角色功能介面
-      } else {
-        document.getElementById("role").textContent = "❌ 無法讀取角色資訊";
-      }
+      // 顯示角色資訊
+      renderRoleUI(player, room); 
     });
-// 投資功能
+
+    // 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
@@ -69,7 +60,7 @@
         return;
       }
 
-      const myMoneyRef = ref(db, `rooms/${currentRoom}/players/${currentUser}/money`);
+      const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       const mySnap = await get(myMoneyRef);
       const myMoney = mySnap.val() || 0;
 
@@ -78,20 +69,19 @@
         return;
       }
 
-      await update(ref(db, `rooms/${currentRoom}/players/${currentUser}`), { money: myMoney - amount });
+      await update(ref(db, `rooms/${room}/players/${player}`), { money: myMoney - amount });
 
-      const targetRef = ref(db, `rooms/${currentRoom}/players/${target}`);
+      const targetRef = ref(db, `rooms/${room}/players/${target}`);
       const targetSnap = await get(targetRef);
       const targetData = targetSnap.val() || {};
 
       await update(targetRef, {
         money: (targetData.money || 0) + amount,
-        [`investors/${currentUser}`]: (targetData.investors?.[currentUser] || 0) + amount
+        [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
       });
 
       status.textContent = `✅ 成功投資 ${target} $${amount}`;
     }
-
   </script>
   <style>
     body {
@@ -117,7 +107,7 @@
     <p id="role">角色：載入中...</p>
   </div>
   <div class="card" id="rolePanel">
-    <p>正在載入角色功能...</p>
+    <p>正在載入角色資訊...</p>
   </div>
   <div class="card" id="investPanel">
     <h3>我要投資：</h3>
@@ -127,9 +117,6 @@
     <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
     <button onclick="invest()">確認投資</button>
     <p id="status"></p>
-
-    
   </div>
-
 </body>
 </html>
