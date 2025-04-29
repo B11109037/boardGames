@@ -72,42 +72,53 @@
     });
 
     // ✅ 投資功能
-    window.invest = async function () {
+   window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
       const investStatus = document.getElementById("investStatus");
-
+    
       if (!target || isNaN(amount) || amount <= 0) {
         investStatus.textContent = "請輸入正確金額與選擇投資對象";
         return;
       }
-
+    
       const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       const mySnap = await get(myMoneyRef);
-      const myData = mySnap.val() || {};
-
-      if (amount > (myData.money || 0)) {
+      const myMoney = mySnap.val() || 0; // ✅ 這裡是正確取金額數字
+    
+      if (amount > myMoney) {
         investStatus.textContent = "💸 餘額不足！";
         return;
       }
-
+    
+      // 扣除自己的金額
       await update(ref(db, `rooms/${room}/players/${player}`), {
-        money: (myData.money || 0) - amount,
-        [`myInvestments/${target}`]: (myData.myInvestments?.[target] || 0) + amount
+        money: myMoney - amount
       });
-
+    
+      // 取得投資對象的資料
       const targetRef = ref(db, `rooms/${room}/players/${target}`);
       const targetSnap = await get(targetRef);
       const targetData = targetSnap.val() || {};
-
+    
+      // 更新投資對象的金額和被投資紀錄
       await update(targetRef, {
         money: (targetData.money || 0) + amount,
         [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
       });
-
-      // 投資成功後，重新載入投資紀錄
+    
+      // 更新自己的投資紀錄
+      const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
+      const myInvestmentSnap = await get(myInvestmentRef);
+      const myInvestments = myInvestmentSnap.val() || {};
+    
+      await update(ref(db, `rooms/${room}/players/${player}/myInvestments`), {
+        [target]: (myInvestments[target] || 0) + amount
+      });
+    
+      // 重新載入自己的投資紀錄，更新畫面
       loadMyInvestments();
-
+    
       investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
     }
 
@@ -171,7 +182,6 @@
   <div class="card">
     <h2>玩家：<span id="playerName">載入中...</span></h2>
     <p>💰 餘額：<strong id="money">$0</strong></p>
-    <p id="role">角色：載入中...</p>
   </div>
 
   <div class="card" id="rolePanel">
