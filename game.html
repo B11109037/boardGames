@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";//加入資料庫
-    import { setupInvestUI } from "./investUI.js";
+    import { setupInvestUI } from "./roleActions.js";
 
     setupInvestUI(currentUser, currentRoom);
  
@@ -53,59 +53,44 @@
       if (roleSnap.exists()) {
         const role = roleSnap.val();
         document.getElementById("role").textContent = `角色：${role}`;
-        renderRolePanel(role);
+        renderRoleUI(currentUser, currentRoom); //✅載入角色功能介面
       } else {
         document.getElementById("role").textContent = "❌ 無法讀取角色資訊";
       }
     });
+// 投資功能
+    window.invest = async function () {
+      const target = document.getElementById("target").value;
+      const amount = parseInt(document.getElementById("amount").value);
+      const status = document.getElementById("status");
 
-    function renderRolePanel(role) {
-  const panel = document.getElementById("rolePanel");
+      if (!target || isNaN(amount) || amount <= 0) {
+        status.textContent = "請輸入正確金額與選擇投資對象";
+        return;
+      }
 
-  if (role === "詐騙者") {
-    panel.innerHTML = `
-      <h4>詐騙者功能</h4>
-      <p>💰 以下是投資你的人（樣板資料）：</p>
-      <ul>
-        <li>Alan 投資了 $50</li>
-        <li>Betty 投資了 $30</li>
-      </ul>
-      <hr />
-      <p>可以在任何回合使用「一鍵捲款」捲走所有資金！</p>
-      <button>📤 投資</button>
-      <button>📤 分配金額給他人</button>
-      <button>🧨 一鍵捲款</button>
-      <button>📤 結束動作</button>
-    `;
-  } else if (role === "投資代理人") {
-    panel.innerHTML = `
-      <h4>投資代理人功能</h4>
-      <p>💰 以下是投資你的人（樣板資料）：</p>
-      <ul>
-        <li>Alan 投資了 $40</li>
-        <li>Cindy 投資了 $20</li>
-      </ul>
-      <hr />
-            <p>收集投資並可分配回報。</p>
-      <button>📤 投資</button>
-      <button>📤 分配金額給他人</button>
-      <button>📤 結束動作</button>
-    `;
-  } else if (role === "普通人") {
-    panel.innerHTML = `
-      <h4>普通人功能</h4>
-      <p>💰 以下是分給你的錢（樣板資料）：</p>
-      <ul>
-        <li>詐騙者 Han 分你 $10</li>
-        <li>投資代理人 Rick 分你 $5</li>
-      </ul>
-      <hr />
-      <p>可以選擇是否投資或建造。</p>
-      <button>💰 進行投資</button>
-       <button>📤 結束動作</button>
-    `;
-  }
-}
+      const myMoneyRef = ref(db, `rooms/${currentRoom}/players/${currentUser}/money`);
+      const mySnap = await get(myMoneyRef);
+      const myMoney = mySnap.val() || 0;
+
+      if (amount > myMoney) {
+        status.textContent = "💸 餘額不足！";
+        return;
+      }
+
+      await update(ref(db, `rooms/${currentRoom}/players/${currentUser}`), { money: myMoney - amount });
+
+      const targetRef = ref(db, `rooms/${currentRoom}/players/${target}`);
+      const targetSnap = await get(targetRef);
+      const targetData = targetSnap.val() || {};
+
+      await update(targetRef, {
+        money: (targetData.money || 0) + amount,
+        [`investors/${currentUser}`]: (targetData.investors?.[currentUser] || 0) + amount
+      });
+
+      status.textContent = `✅ 成功投資 ${target} $${amount}`;
+    }
 
   </script>
   <style>
@@ -134,7 +119,17 @@
   <div class="card" id="rolePanel">
     <p>正在載入角色功能...</p>
   </div>
-  <div class="card" id="investPanel"></div>
+  <div class="card" id="investPanel">
+    <h3>我要投資：</h3>
+    <label for="target">選擇對象：</label>
+    <select id="target"></select>
+    <label for="amount">投資金額：</label>
+    <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
+    <button onclick="invest()">確認投資</button>
+    <p id="status"></p>
+
+    
+  </div>
 
 </body>
 </html>
