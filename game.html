@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";//加入資料庫
-    //import { setupInvestUI } from "./roleActions.js";
+    import { setupInvestUI } from "./roleActions.js";
 
 
  
@@ -53,7 +53,7 @@
       if (roleSnap.exists()) {
         const role = roleSnap.val();
         document.getElementById("role").textContent = `角色：${role}`;
-        renderRoleUI(currentUser, currentRoom); //✅載入角色功能介面
+        renderRoleUI(player, room);  //✅載入角色功能介面
       } else {
         document.getElementById("role").textContent = "❌ 無法讀取角色資訊";
       }
