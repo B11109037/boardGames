@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from "./roleActions.js"; //✅ 正確匯入
+    import { renderRoleUI } from "./roleActions.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -22,9 +22,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase();
-    
-  
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const player = urlParams.get("player");
     const room = urlParams.get("room");
@@ -32,26 +30,47 @@
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("playerName").textContent = player;
 
-      const playerRef = ref(db, `rooms/${room}/players/${player}`);
       const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      
-      // 設定初始金額
-      get(moneyRef).then(snap => {
+      get(moneyRef).then(async snap => {
         if (!snap.exists()) {
-          set(moneyRef, 100);
+          await set(moneyRef, 100);//初始化金錢
+        }
+        onValue(moneyRef, snap => {
+          document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
+        });
+      });
+
+      renderRoleUI(player, room);
+
+      // 🔥 自動載入投資對象名單（排除自己）
+      const playersRef = ref(db, `rooms/${room}/players`);
+      onValue(playersRef, (snap) => {
+        const players = snap.val() || {};
+        const targetSelect = document.getElementById("target");
+        const status = document.getElementById("targetStatus");
+        targetSelect.innerHTML = "";
+        let hasTarget = false;
+
+        for (let name in players) {
+          if (name !== player) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            targetSelect.appendChild(option);
+            hasTarget = true;
+          }
+        }
+
+        if (!hasTarget) {
+          targetSelect.innerHTML = `<option disabled selected>無可投資對象</option>`;
+          status.textContent = "⚠️ 目前房間內沒有其他可投資對象";
+        } else {
+          status.textContent = "";
         }
       });
-
-      // 監聽金額變化
-      onValue(moneyRef, snap => {
-        document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
-      });
-
-      // 顯示角色資訊
-      renderRoleUI(player, room); 
     });
 
-    // 投資功能
+    // ✅ 投資功能
     window.invest = async function () {
       const target = document.getElementById("target").value;
       const amount = parseInt(document.getElementById("amount").value);
@@ -106,6 +125,7 @@
   <div class="card">
     <h2>玩家：<span id="playerName">載入中...</span></h2>
     <p>💰 餘額：<strong id="money">$0</strong></p>
+    <p id="role">角色：載入中...</p>
   </div>
   <div class="card" id="rolePanel">
     <p>正在載入角色資訊...</p>
@@ -114,6 +134,7 @@
     <h3>我要投資：</h3>
     <label for="target">選擇對象：</label>
     <select id="target"></select>
+    <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
     <label for="amount">投資金額：</label>
     <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
     <button onclick="invest()">確認投資</button>
