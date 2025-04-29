@@ -6,7 +6,10 @@
   <title>角色動作頁面</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, get, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";//加入資料庫
+    import { setupInvestUI } from './components/investUI.js';//加入investUI的程式
+
+    setupInvestUI(currentUser, currentRoom);
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -131,5 +134,6 @@
   <div class="card" id="rolePanel">
     <p>正在載入角色功能...</p>
   </div>
+  <div class="card" id="investPanel"></div>
 </body>
 </html>
