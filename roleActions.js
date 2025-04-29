@@ -12,16 +12,16 @@ export async function renderRoleUI(playerName, roomCode) {
   }
 
   const role = roleSnap.val();
-  console.log("成功讀取角色：", role);
   const rolePanel = document.getElementById("rolePanel");
 
-  // 初步渲染角色資訊
+  // 🔥 先顯示角色身份
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <p>你的角色是：<strong>${role}</strong></p>
+    <div id="roleExtraInfo">請選擇對象並進行投資！</div>
   `;
 
-  // 如果是詐騙者或投資代理人，顯示被誰投資
+  // 🔥 如果角色是詐騙者或投資代理人，再去讀取 investors
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     onValue(investorsRef, (snap) => {
