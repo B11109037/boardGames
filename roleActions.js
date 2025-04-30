@@ -17,7 +17,6 @@ export async function renderRoleUI(playerName, roomCode) {
   // 🔥 先顯示角色身份
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
-    <h3>測試</h3>
     <div id="roleExtraInfo">載入中...</div>
   `;
 
