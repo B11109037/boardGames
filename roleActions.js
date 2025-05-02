@@ -19,7 +19,7 @@ export async function renderRoleUI(playerName, roomCode) {
     rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">🔍 等待投資資訊...</div>
+    <div id="roleExtraInfo">...</div>
   `;
 
   // 🔥 如果角色是詐騙者或投資代理人，再去讀取 investors
