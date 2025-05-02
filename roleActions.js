@@ -5,19 +5,21 @@ export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
   const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
   const roleSnap = await get(roleRef);
-
+  const rolePanel = document.getElementById("rolePanel"); 
+  
   if (!roleSnap.exists()) {
     document.getElementById("rolePanel").innerHTML = `<p>❌ 無法讀取角色資訊</p>`;
     return;
   }
 
   const role = roleSnap.val();
-  const rolePanel = document.getElementById("rolePanel");
+
 
   // 🔥 先顯示角色身份
-  rolePanel.innerHTML = `
+    rolePanel.innerHTML = `
     <h3>角色資訊</h3>
-    <div id="role">載入中...</div>
+    <div id="role">${role}</div>
+    <div id="roleExtraInfo">🔍 等待投資資訊...</div>
   `;
 
   // 🔥 如果角色是詐騙者或投資代理人，再去讀取 investors
