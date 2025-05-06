@@ -13,7 +13,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
   const role = roleSnap.val();
 
-  // 顯示角色資訊區塊與可動態插入的面板
+  // 顯示角色資訊與分配區塊
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
@@ -32,43 +32,48 @@ export async function renderRoleUI(playerName, roomCode) {
     </div>
   `;
 
+  // 🔥 暫存投資者資料
+  let latestInvestors = {};
+
   // 詐騙者／投資代理人：顯示投資者名單與分配功能
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-    onValue(investorsRef, async (snap) => {
-      const investors = snap.val() || {};
-      const extraInfo = document.getElementById("roleExtraInfo");
-      const select = document.getElementById("allocateTarget");
-      const allocateSection = document.getElementById("allocateSection");
+    const select = document.getElementById("allocateTarget");
+    const allocateSection = document.getElementById("allocateSection");
+    const extraInfo = document.getElementById("roleExtraInfo");
 
-      if (Object.keys(investors).length === 0) {
-        extraInfo.innerHTML = "⚠️ 目前還沒有人投資你";
-        allocateSection.style.display = "none";
-        return;
-      }
+    onValue(investorsRef, (snap) => {
+      latestInvestors = snap.val() || {};
 
-      // 顯示投資名單與已回饋金額
-      let content = "<h4>投資你的人：</h4>";
+      // 更新下拉選單
       select.innerHTML = "";
-
-      for (let name in investors) {
-        const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${name}`);
-        const givenSnap = await get(givenBackRef);
-        const given = givenSnap.exists() ? givenSnap.val() : 0;
-
-        content += `<p>${name}：$${investors[name]}（已回饋 $${given}）</p>`;
-
+      for (let name in latestInvestors) {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
       }
 
-      extraInfo.innerHTML = content;
-      allocateSection.style.display = "block";
+      // 如果有人投資才顯示面板
+      allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
     });
 
-    // 分配金額事件：自己扣款、對方加錢、記錄 received（累加）、記錄 givenBack（累加）
+    // 👉 即時監聽 givenBack 更新畫面
+    const givenBackAllRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
+    onValue(givenBackAllRef, (snap) => {
+      const givenBackMap = snap.val() || {};
+      let html = "<h4>投資你的人：</h4>";
+
+      for (let name in latestInvestors) {
+        const invested = latestInvestors[name];
+        const returned = givenBackMap[name] || 0;
+        html += `<p>${name}：$${invested}（已回饋 $${returned}）</p>`;
+      }
+
+      extraInfo.innerHTML = html;
+    });
+
+    // 分配按鈕
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
