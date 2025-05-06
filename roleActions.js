@@ -17,7 +17,7 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">等待投資資訊...</div>
+    //<div id="roleExtraInfo">等待投資資訊...</div>
 
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;">
       <h3>我要分配金額：</h3>
