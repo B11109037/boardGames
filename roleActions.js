@@ -13,7 +13,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
   const role = roleSnap.val();
 
-  // 顯示角色資訊（先建立基本框架）
+  // 顯示角色資訊區塊與可動態插入的面板
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
@@ -29,7 +29,7 @@ export async function renderRoleUI(playerName, roomCode) {
     </div>
   `;
 
-  // 如果角色是詐騙者或投資代理人，啟用分配功能
+  // 詐騙者／投資代理人：顯示投資者名單與分配功能
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     onValue(investorsRef, (snap) => {
@@ -46,7 +46,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
       // 顯示投資名單
       let content = "<h4>投資你的人：</h4>";
-      select.innerHTML = ""; // 清空下拉選單
+      select.innerHTML = "";
       for (let name in investors) {
         content += `<p>${name}：$${investors[name]}</p>`;
         const option = document.createElement("option");
@@ -58,7 +58,7 @@ export async function renderRoleUI(playerName, roomCode) {
       allocateSection.style.display = "block";
     });
 
-    // 監聽分配按鈕點擊事件
+    // 分配金額後扣除自身金額
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -68,10 +68,50 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      const receivedRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
-      await update(receivedRef, { amount });
+      // 取得自己剩餘金額
+      const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+      const moneySnap = await get(moneyRef);
+      const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+      if (currentMoney < amount) {
+        alert("❌ 金額不足，無法分配！");
+        return;
+      }
+
+      // 寫入 received 給對方，並扣款自己金額
+      await update(ref(db), {
+        [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: amount,
+        [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount
+      });
+
+      // 清空表單
+      document.getElementById("allocateAmount").value = "";
+      document.getElementById("allocateTarget").selectedIndex = 0;
 
       alert(`✅ 已分配 $${amount} 給 ${targetName}`);
+    });
+  }
+
+  // 普通投資者：顯示我收到的分配金額
+  if (role !== "詐騙者" && role !== "投資代理人") {
+    const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
+    onValue(receivedRef, (snap) => {
+      const received = snap.val() || {};
+      const receivedPanel = document.createElement("div");
+      receivedPanel.id = "receivedPanel";
+      receivedPanel.style.marginTop = "20px";
+
+      if (Object.keys(received).length === 0) {
+        receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
+      } else {
+        let html = "<h4>你收到的金額：</h4>";
+        for (let name in received) {
+          html += `<p>${name} 分配給你 $${received[name]}</p>`;
+        }
+        receivedPanel.innerHTML = html;
+      }
+
+      rolePanel.appendChild(receivedPanel);
     });
   }
 }
