@@ -32,19 +32,39 @@ export async function renderRoleUI(playerName, roomCode) {
     </div>
   `;
 
-  // 🔥 暫存投資者資料
+  // 🔥 儲存投資名單與已回饋金額（即時同步用）
   let latestInvestors = {};
+  let latestGivenBack = {};
 
-  // 詐騙者／投資代理人：顯示投資者名單與分配功能
+  // ✅ 統一更新畫面
+  function updateInvestorDisplay() {
+    const extraInfo = document.getElementById("roleExtraInfo");
+    if (!extraInfo) return;
+
+    if (Object.keys(latestInvestors).length === 0) {
+      extraInfo.innerHTML = "⚠️ 目前還沒有人投資你";
+      return;
+    }
+
+    let html = "<h4>投資你的人：</h4>";
+    for (let name in latestInvestors) {
+      const invested = latestInvestors[name];
+      const returned = latestGivenBack[name] || 0;
+      html += `<p>${name}：$${invested}（已回饋 $${returned}）</p>`;
+    }
+
+    extraInfo.innerHTML = html;
+  }
+
+  // 詐騙者／投資代理人：監聽 investors 與 givenBack 並啟用分配功能
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+    const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
     const select = document.getElementById("allocateTarget");
     const allocateSection = document.getElementById("allocateSection");
-    const extraInfo = document.getElementById("roleExtraInfo");
 
     onValue(investorsRef, (snap) => {
       latestInvestors = snap.val() || {};
-
       // 更新下拉選單
       select.innerHTML = "";
       for (let name in latestInvestors) {
@@ -53,27 +73,16 @@ export async function renderRoleUI(playerName, roomCode) {
         option.textContent = name;
         select.appendChild(option);
       }
-
-      // 如果有人投資才顯示面板
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
+      updateInvestorDisplay(); // 更新畫面
     });
 
-    // 👉 即時監聽 givenBack 更新畫面
-    const givenBackAllRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
-    onValue(givenBackAllRef, (snap) => {
-      const givenBackMap = snap.val() || {};
-      let html = "<h4>投資你的人：</h4>";
-
-      for (let name in latestInvestors) {
-        const invested = latestInvestors[name];
-        const returned = givenBackMap[name] || 0;
-        html += `<p>${name}：$${invested}（已回饋 $${returned}）</p>`;
-      }
-
-      extraInfo.innerHTML = html;
+    onValue(givenBackRef, (snap) => {
+      latestGivenBack = snap.val() || {};
+      updateInvestorDisplay(); // 更新畫面
     });
 
-    // 分配按鈕
+    // 分配按鈕點擊事件
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -103,8 +112,8 @@ export async function renderRoleUI(playerName, roomCode) {
       const receivedSnap = await get(receivedRef);
       const oldReceived = receivedSnap.exists() ? receivedSnap.val() : 0;
 
-      const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`);
-      const givenBackSnap = await get(givenBackRef);
+      const givenBackTargetRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`);
+      const givenBackSnap = await get(givenBackTargetRef);
       const alreadyGiven = givenBackSnap.exists() ? givenBackSnap.val() : 0;
 
       await update(ref(db), {
