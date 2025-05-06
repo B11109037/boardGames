@@ -58,7 +58,7 @@ export async function renderRoleUI(playerName, roomCode) {
       allocateSection.style.display = "block";
     });
 
-    // 分配金額後扣除自身金額
+    // 分配金額後：自己扣錢、對方加錢、記錄 received
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -68,7 +68,7 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      // 取得自己剩餘金額
+      // 取得自己金額
       const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
       const moneySnap = await get(moneyRef);
       const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
@@ -78,10 +78,16 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      // 寫入 received 給對方，並扣款自己金額
+      // 取得對方金額
+      const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
+      const targetMoneySnap = await get(targetMoneyRef);
+      const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
+
+      // 更新三件事：received、自己扣款、對方加款
       await update(ref(db), {
         [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: amount,
-        [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount
+        [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
+        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount
       });
 
       // 清空表單
@@ -97,9 +103,15 @@ export async function renderRoleUI(playerName, roomCode) {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
     onValue(receivedRef, (snap) => {
       const received = snap.val() || {};
-      const receivedPanel = document.createElement("div");
-      receivedPanel.id = "receivedPanel";
-      receivedPanel.style.marginTop = "20px";
+      let receivedPanel = document.getElementById("receivedPanel");
+      if (!receivedPanel) {
+        receivedPanel = document.createElement("div");
+        receivedPanel.id = "receivedPanel";
+        receivedPanel.style.marginTop = "20px";
+        rolePanel.appendChild(receivedPanel);
+      }
+
+      receivedPanel.innerHTML = ""; // 清空畫面
 
       if (Object.keys(received).length === 0) {
         receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
@@ -110,8 +122,6 @@ export async function renderRoleUI(playerName, roomCode) {
         }
         receivedPanel.innerHTML = html;
       }
-
-      rolePanel.appendChild(receivedPanel);
     });
   }
 }
