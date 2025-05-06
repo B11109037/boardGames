@@ -20,7 +20,7 @@ export async function renderRoleUI(playerName, roomCode) {
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
     <button id="allocateBtn">💸 分配金額給投資者</button>
-    <div id="roleExtraInfo">...</div>
+    <div id="roleExtraInfo">等待投資資訊</div>
   `;
 
   // 🔥 如果角色是詐騙者或投資代理人，再去讀取 investors
