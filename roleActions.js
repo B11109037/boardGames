@@ -13,23 +13,26 @@ export async function renderRoleUI(playerName, roomCode) {
 
   const role = roleSnap.val();
 
-  // 顯示角色資訊區塊與可動態插入的面板
+  // 顯示角色資訊與分配區塊（模仿投資 UI）
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
     <div id="roleExtraInfo">等待投資資訊...</div>
-    <div id="allocateSection" style="margin-top: 10px; display: none;">
-      <label>選擇對象：
-        <select id="allocateTarget"></select>
-      </label>
-      <label>分配金額：
-        <input type="number" id="allocateAmount" placeholder="輸入金額，例如 20">
-      </label>
+
+    <div id="allocateSection" class="card" style="margin-top: 10px; display: none;">
+      <h3>我要分配金額：</h3>
+      <label for="allocateTarget">選擇對象：</label>
+      <select id="allocateTarget"></select>
+
+      <label for="allocateAmount">分配金額：</label>
+      <input type="number" id="allocateAmount" placeholder="輸入金額，例如 20" min="1">
       <button id="allocateConfirmBtn">確認分配</button>
+
+      <p id="allocateStatus" style="color: green;"></p>
     </div>
   `;
 
-  // 詐騙者／投資代理人：顯示投資者名單與分配功能
+  // 若為詐騙者或投資代理人，載入投資者名單 + 分配邏輯
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     onValue(investorsRef, (snap) => {
@@ -58,47 +61,47 @@ export async function renderRoleUI(playerName, roomCode) {
       allocateSection.style.display = "block";
     });
 
-    // 分配金額後：自己扣錢、對方加錢、記錄 received
+    // ✅ 分配金額邏輯（自己扣錢，對方加錢，寫入 received）
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
+      const status = document.getElementById("allocateStatus");
 
       if (!targetName || isNaN(amount) || amount <= 0) {
-        alert("請選擇對象並輸入正確金額！");
+        status.style.color = "red";
+        status.textContent = "請輸入正確金額並選擇對象";
         return;
       }
 
-      // 取得自己金額
       const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
       const moneySnap = await get(moneyRef);
       const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
 
       if (currentMoney < amount) {
-        alert("❌ 金額不足，無法分配！");
+        status.style.color = "red";
+        status.textContent = "❌ 金額不足，無法分配！";
         return;
       }
 
-      // 取得對方金額
       const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
       const targetMoneySnap = await get(targetMoneyRef);
       const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
 
-      // 更新三件事：received、自己扣款、對方加款
       await update(ref(db), {
         [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: amount,
         [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
         [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount
       });
 
-      // 清空表單
       document.getElementById("allocateAmount").value = "";
       document.getElementById("allocateTarget").selectedIndex = 0;
 
-      alert(`✅ 已分配 $${amount} 給 ${targetName}`);
+      status.style.color = "green";
+      status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
     });
   }
 
-  // 普通投資者：顯示我收到的分配金額
+  // 普通人看到自己收到的金額（received）
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
     onValue(receivedRef, (snap) => {
