@@ -13,7 +13,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
   const role = roleSnap.val();
 
-  // 顯示角色資訊與分配區塊（模仿投資 UI）
+  // 顯示角色資訊區塊與可動態插入的面板
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
@@ -32,10 +32,10 @@ export async function renderRoleUI(playerName, roomCode) {
     </div>
   `;
 
-  // 若為詐騙者或投資代理人，載入投資者名單 + 分配邏輯
+  // 詐騙者／投資代理人：顯示投資者名單與分配功能
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-    onValue(investorsRef, (snap) => {
+    onValue(investorsRef, async (snap) => {
       const investors = snap.val() || {};
       const extraInfo = document.getElementById("roleExtraInfo");
       const select = document.getElementById("allocateTarget");
@@ -47,21 +47,28 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      // 顯示投資名單
+      // 顯示投資名單與已回饋金額
       let content = "<h4>投資你的人：</h4>";
       select.innerHTML = "";
+
       for (let name in investors) {
-        content += `<p>${name}：$${investors[name]}</p>`;
+        const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${name}`);
+        const givenSnap = await get(givenBackRef);
+        const given = givenSnap.exists() ? givenSnap.val() : 0;
+
+        content += `<p>${name}：$${investors[name]}（已回饋 $${given}）</p>`;
+
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
       }
+
       extraInfo.innerHTML = content;
       allocateSection.style.display = "block";
     });
 
-    // ✅ 分配金額邏輯（自己扣錢，對方加錢，寫入 received）
+    // 分配金額事件：自己扣款、對方加錢、記錄 received（累加）、記錄 givenBack（累加）
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -87,10 +94,19 @@ export async function renderRoleUI(playerName, roomCode) {
       const targetMoneySnap = await get(targetMoneyRef);
       const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
 
+      const receivedRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
+      const receivedSnap = await get(receivedRef);
+      const oldReceived = receivedSnap.exists() ? receivedSnap.val() : 0;
+
+      const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`);
+      const givenBackSnap = await get(givenBackRef);
+      const alreadyGiven = givenBackSnap.exists() ? givenBackSnap.val() : 0;
+
       await update(ref(db), {
-        [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: amount,
+        [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: oldReceived + amount,
         [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
-        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount
+        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount,
+        [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount
       });
 
       document.getElementById("allocateAmount").value = "";
@@ -101,7 +117,7 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
 
-  // 普通人看到自己收到的金額（received）
+  // 普通人：顯示我收到的金額（累加）
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
     onValue(receivedRef, (snap) => {
@@ -114,7 +130,7 @@ export async function renderRoleUI(playerName, roomCode) {
         rolePanel.appendChild(receivedPanel);
       }
 
-      receivedPanel.innerHTML = ""; // 清空畫面
+      receivedPanel.innerHTML = "";
 
       if (Object.keys(received).length === 0) {
         receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
