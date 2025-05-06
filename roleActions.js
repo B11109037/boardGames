@@ -19,6 +19,7 @@ export async function renderRoleUI(playerName, roomCode) {
     rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
+    <button id="allocateBtn">💸 分配金額給投資者</button>
     <div id="roleExtraInfo">...</div>
   `;
 
@@ -40,5 +41,27 @@ export async function renderRoleUI(playerName, roomCode) {
       }
       extraInfo.innerHTML = content;
     });
+
+    // 加上分配金額按鈕監聽
+    const allocateBtn = document.getElementById("allocateBtn");
+    allocateBtn.addEventListener("click", async () => {
+      const targetName = prompt("請輸入要分配金額的對象名稱：");
+      if (!targetName) return;
+    
+      const amountStr = prompt(`請輸入要分配給 ${targetName} 的金額：`);
+      const amount = parseInt(amountStr);
+      if (isNaN(amount) || amount <= 0) {
+        alert("請輸入正確的金額！");
+        return;
+      }
+    
+      // 寫入 Firebase：rooms/{roomCode}/players/{targetName}/received/{playerName}: amount
+      const db = getDatabase();
+      const receivedRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
+      await update(receivedRef, { amount });
+    
+      alert(`✅ 已分配 $${amount} 給 ${targetName}`);
+    });
+    
   }
 }
