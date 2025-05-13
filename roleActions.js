@@ -1,4 +1,4 @@
-import { getDatabase, ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
@@ -30,13 +30,13 @@ export async function renderRoleUI(playerName, roomCode) {
 
       <p id="allocateStatus" style="color: green;"></p>
     </div>
+    <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
 
   // 🔥 儲存投資名單與已回饋金額（即時同步用）
   let latestInvestors = {};
   let latestGivenBack = {};
 
-  // ✅ 統一更新畫面
   function updateInvestorDisplay() {
     const extraInfo = document.getElementById("roleExtraInfo");
     if (!extraInfo) return;
@@ -56,7 +56,7 @@ export async function renderRoleUI(playerName, roomCode) {
     extraInfo.innerHTML = html;
   }
 
-  // 詐騙者／投資代理人：監聽 investors 與 givenBack 並啟用分配功能
+  // 詐騙者／投資代理人
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
@@ -65,7 +65,6 @@ export async function renderRoleUI(playerName, roomCode) {
 
     onValue(investorsRef, (snap) => {
       latestInvestors = snap.val() || {};
-      // 更新下拉選單
       select.innerHTML = "";
       for (let name in latestInvestors) {
         const option = document.createElement("option");
@@ -74,15 +73,14 @@ export async function renderRoleUI(playerName, roomCode) {
         select.appendChild(option);
       }
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
-      updateInvestorDisplay(); // 更新畫面
+      updateInvestorDisplay();
     });
 
     onValue(givenBackRef, (snap) => {
       latestGivenBack = snap.val() || {};
-      updateInvestorDisplay(); // 更新畫面
+      updateInvestorDisplay();
     });
 
-    // 分配按鈕點擊事件
     document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
       const targetName = document.getElementById("allocateTarget").value;
       const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -129,9 +127,53 @@ export async function renderRoleUI(playerName, roomCode) {
       status.style.color = "green";
       status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
     });
+
+    // 額外顯示投資代理人選項
+    if (role === "投資代理人") {
+      const optionA = {
+        chance: Math.floor(Math.random() * 51) + 50, // 50~100%
+        multiplier: (Math.random() * 1 + 1).toFixed(2) // 1.00 ~ 2.00x
+      };
+      const optionB = {
+        chance: Math.floor(Math.random() * 31) + 20, // 20~50%
+        multiplier: (Math.random() * 1.5 + 1.5).toFixed(2) // 1.5 ~ 3.0x
+      };
+
+      const section = document.getElementById("agentOptionsSection");
+      section.style.display = "block";
+      section.innerHTML = `
+        <h3>本日代理選項：</h3>
+        <p>A：成功機率 ${optionA.chance}%、回報倍率 ${optionA.multiplier} 倍</p>
+        <p>B：成功機率 ${optionB.chance}%、回報倍率 ${optionB.multiplier} 倍</p>
+        <label>投入金額：</label>
+        <input id="agentAmount" type="number" placeholder="例如 30" min="1">
+        <button onclick="submitAgentOption('A', ${optionA.chance}, ${optionA.multiplier})">選擇 A</button>
+        <button onclick="submitAgentOption('B', ${optionB.chance}, ${optionB.multiplier})">選擇 B</button>
+        <p id="agentStatus" style="color: green;"></p>
+      `;
+
+      window.submitAgentOption = async (opt, chance, multiplier) => {
+        const amount = parseInt(document.getElementById("agentAmount").value);
+        const status = document.getElementById("agentStatus");
+        if (isNaN(amount) || amount <= 0) {
+          status.style.color = "red";
+          status.textContent = "請輸入正確金額";
+          return;
+        }
+
+        await set(ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`), {
+          option: opt,
+          chance,
+          multiplier,
+          amount
+        });
+
+        status.style.color = "green";
+        status.textContent = `✅ 已選擇方案 ${opt} 並投入 $${amount}`;
+      };
+    }
   }
 
-  // 普通人：顯示我收到的金額（累加）
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
     onValue(receivedRef, (snap) => {
