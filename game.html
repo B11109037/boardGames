@@ -74,7 +74,7 @@
 
         const playerRef = ref(db, `rooms/${room}/players/${player}`);
         await update(playerRef, { ended: true });
-        endStatus.textContent = "✅ 你已結束今日動作，等待其他玩家...";
+        endStatus.innerHTML = "<span style='color: green;'>✅ 你已結束今日動作，等待其他玩家...</span>";
 
         const playersRef = ref(db, `rooms/${room}/players`);
         const playersSnap = await get(playersRef);
@@ -97,7 +97,7 @@
               ended: false
             });
           }
-          endStatus.textContent = "🎉 所有人皆已結束！新的一天開始，已發放 $100";
+          endStatus.innerHTML = "<span style='color: green;'>🎉 所有人皆已結束！新的一天開始，已發放 $100</span>";
         }
       });
     });
@@ -144,7 +144,7 @@
 
       loadMyInvestments();
 
-      investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
+      investStatus.innerHTML = `<span style='color: green;'>✅ 成功投資 ${target} $${amount}</span>`;
     }
 
     function loadMyInvestments() {
@@ -221,7 +221,7 @@
     <p id="investStatus"></p>
 
     <button id="endTurnBtn">結束動作</button>
-    <p id="endStatus" style="color: green;"></p>
+    <p id="endStatus"></p>
   </div>
 
   <div class="card" id="investmentHistory">
