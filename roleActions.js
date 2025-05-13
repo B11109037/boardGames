@@ -64,19 +64,23 @@ export async function renderRoleUI(playerName, roomCode) {
       const optB = existing.options.B;
       section.innerHTML = `
         <h3>本日代理選項：</h3>
-        <p>A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
-        <p>B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
-        <button id="chooseA">選擇 A</button>
-        <button id="chooseB">選擇 B</button>
-        <p id="agentStatus" style="color: green;"></p>
+        <div id="agentOptions">
+          <p id="optionA">A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
+          <p id="optionB">B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
+          <button id="chooseA">選擇 A</button>
+          <button id="chooseB">選擇 B</button>
+          <p id="agentStatus" style="color: green;"></p>
+        </div>
       `;
 
       document.getElementById("chooseA").addEventListener("click", async () => {
         await lockAgentOption("A", existing.options.A);
+        document.getElementById("chooseB").disabled = true;
       });
 
       document.getElementById("chooseB").addEventListener("click", async () => {
         await lockAgentOption("B", existing.options.B);
+        document.getElementById("chooseA").disabled = true;
       });
 
       async function lockAgentOption(option, detail) {
@@ -94,7 +98,8 @@ export async function renderRoleUI(playerName, roomCode) {
 
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-        setTimeout(() => location.reload(), 1000);
+        document.getElementById("chooseA").disabled = true;
+        document.getElementById("chooseB").disabled = true;
       }
     });
   }
