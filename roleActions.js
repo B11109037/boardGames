@@ -33,7 +33,6 @@ export async function renderRoleUI(playerName, roomCode) {
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
 
-  // 🔥 儲存投資名單與已回饋金額（即時同步用）
   let latestInvestors = {};
   let latestGivenBack = {};
 
@@ -56,49 +55,72 @@ export async function renderRoleUI(playerName, roomCode) {
     extraInfo.innerHTML = html;
   }
 
-  // 額外顯示投資代理人選項（放在 if 判斷外）
   if (role === "投資代理人") {
     const optionA = {
       chance: Math.floor(Math.random() * 51) + 50,
-      multiplier: (Math.random() * 1 + 1).toFixed(2)
+      multiplier: (Math.random() * 1 + 1).toFixed(2),
+      duration: Math.floor(Math.random() * 4) + 1
     };
     const optionB = {
       chance: Math.floor(Math.random() * 31) + 20,
-      multiplier: (Math.random() * 1.5 + 1.5).toFixed(2)
+      multiplier: (Math.random() * 1.5 + 1.5).toFixed(2),
+      duration: Math.floor(Math.random() * 4) + 1
     };
 
     const section = document.getElementById("agentOptionsSection");
     section.style.display = "block";
     section.innerHTML = `
       <h3>本日代理選項：</h3>
-      <p>A：成功機率 ${optionA.chance}%、回報倍率 ${optionA.multiplier} 倍</p>
-      <p>B：成功機率 ${optionB.chance}%、回報倍率 ${optionB.multiplier} 倍</p>
+      <p>A：成功機率 ${optionA.chance}%、回報倍率 ${optionA.multiplier} 倍、持續 ${optionA.duration} 回合</p>
+      <p>B：成功機率 ${optionB.chance}%、回報倍率 ${optionB.multiplier} 倍、持續 ${optionB.duration} 回合</p>
       <label>投入金額：</label>
       <input id="agentAmount" type="number" placeholder="例如 30" min="1">
-      <button onclick="submitAgentOption('A', ${optionA.chance}, ${optionA.multiplier})">選擇 A</button>
-      <button onclick="submitAgentOption('B', ${optionB.chance}, ${optionB.multiplier})">選擇 B</button>
+      <button id="chooseA">選擇 A</button>
+      <button id="chooseB">選擇 B</button>
       <p id="agentStatus" style="color: green;"></p>
     `;
 
-    window.submitAgentOption = async (opt, chance, multiplier) => {
+    document.getElementById("chooseA").addEventListener("click", () => submitAgentOption("A", optionA));
+    document.getElementById("chooseB").addEventListener("click", () => submitAgentOption("B", optionB));
+
+    async function submitAgentOption(opt, config) {
       const amount = parseInt(document.getElementById("agentAmount").value);
       const status = document.getElementById("agentStatus");
+
       if (isNaN(amount) || amount <= 0) {
         status.style.color = "red";
         status.textContent = "請輸入正確金額";
         return;
       }
 
-      await set(ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`), {
-        option: opt,
-        chance,
-        multiplier,
-        amount
+      const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+      const moneySnap = await get(moneyRef);
+      const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+      if (amount > currentMoney) {
+        status.style.color = "red";
+        status.textContent = "❌ 金額不足，無法投入！";
+        return;
+      }
+
+      await update(ref(db), {
+        [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
+        [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
+          option: opt,
+          chance: config.chance,
+          multiplier: config.multiplier,
+          amount,
+          roundsLeft: config.duration,
+          locked: true
+        }
       });
 
+      document.getElementById("chooseA").disabled = true;
+      document.getElementById("chooseB").disabled = true;
+      document.getElementById("agentAmount").disabled = true;
       status.style.color = "green";
       status.textContent = `✅ 已選擇方案 ${opt} 並投入 $${amount}`;
-    };
+    }
   }
 
   if (role === "詐騙者" || role === "投資代理人") {
