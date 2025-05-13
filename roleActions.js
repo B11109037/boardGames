@@ -28,7 +28,7 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      if (existing && String(existing.locked) === "true") {
+      if (existing && (existing.locked === true || existing.locked === "true")) {
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
@@ -136,7 +136,9 @@ export async function renderRoleUI(playerName, roomCode) {
 
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-        setTimeout(() => location.reload(), 500);
+
+        // 不要 reload，改為刷新畫面
+        renderRoleUI(playerName, roomCode);
       }
     });
   }
