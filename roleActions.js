@@ -34,10 +34,10 @@ export async function renderRoleUI(playerName, roomCode) {
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
           <p>剩餘回合：${existing.roundsLeft}</p>
-          <div style="margin-top: 10px;">
+          <div class="card" style="margin-top: 10px;">
             <label for="investAmount">投入金額：</label>
-            <input type="number" id="investAmount" placeholder="例如 50" min="1">
-            <button id="investAgent">確認投入</button>
+            <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
+            <button id="investAgent">確認投資</button>
             <p id="investResult" style="color: green;"></p>
           </div>
         `;
@@ -115,12 +115,10 @@ export async function renderRoleUI(playerName, roomCode) {
 
       document.getElementById("chooseA").addEventListener("click", async () => {
         await lockAgentOption("A", existing.options.A);
-        document.getElementById("chooseB").disabled = true;
       });
 
       document.getElementById("chooseB").addEventListener("click", async () => {
         await lockAgentOption("B", existing.options.B);
-        document.getElementById("chooseA").disabled = true;
       });
 
       async function lockAgentOption(option, detail) {
@@ -138,9 +136,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-        document.getElementById("chooseA").disabled = true;
-        document.getElementById("chooseB").disabled = true;
-        setTimeout(() => location.reload(), 800);
+        setTimeout(() => location.reload(), 500);
       }
     });
   }
