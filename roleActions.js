@@ -28,18 +28,58 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      // 已選擇方案，顯示鎖定資訊
       if (existing && existing.locked) {
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
           <p>剩餘回合：${existing.roundsLeft}</p>
+          <div style="margin-top: 10px;">
+            <label for="investAmount">投入金額：</label>
+            <input type="number" id="investAmount" placeholder="例如 50" min="1">
+            <button id="investAgent">確認投入</button>
+            <p id="investResult" style="color: green;"></p>
+          </div>
         `;
+
+        document.getElementById("investAgent").addEventListener("click", async () => {
+          const amount = parseInt(document.getElementById("investAmount").value);
+          const result = document.getElementById("investResult");
+
+          if (isNaN(amount) || amount <= 0) {
+            result.style.color = "red";
+            result.textContent = "請輸入有效金額！";
+            return;
+          }
+
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+          if (currentMoney < amount) {
+            result.style.color = "red";
+            result.textContent = "💸 餘額不足！";
+            return;
+          }
+
+          const success = Math.random() * 100 < existing.chance;
+          let finalMoney = currentMoney - amount;
+
+          if (success) {
+            const profit = Math.round(amount * existing.multiplier);
+            finalMoney += profit;
+            result.style.color = "green";
+            result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+          } else {
+            result.style.color = "red";
+            result.textContent = `❌ 投資失敗，損失 $${amount}`;
+          }
+
+          await update(moneyRef, finalMoney);
+        });
         return;
       }
 
-      // 若未選擇則生成選項並儲存至 Firebase
       if (!existing || !existing.options) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
@@ -100,6 +140,7 @@ export async function renderRoleUI(playerName, roomCode) {
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
         document.getElementById("chooseA").disabled = true;
         document.getElementById("chooseB").disabled = true;
+        setTimeout(() => location.reload(), 800);
       }
     });
   }
