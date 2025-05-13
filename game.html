@@ -72,8 +72,8 @@
       document.getElementById("endTurnBtn").addEventListener("click", async () => {
         const endStatus = document.getElementById("endStatus");
 
-        const endRef = ref(db, `rooms/${room}/players/${player}/ended`);
-        await update(endRef, true);
+        const playerRef = ref(db, `rooms/${room}/players/${player}`);
+        await update(playerRef, { ended: true });
         endStatus.textContent = "✅ 你已結束今日動作，等待其他玩家...";
 
         const playersRef = ref(db, `rooms/${room}/players`);
