@@ -1,235 +1,35 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>角色桌遊主頁面</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from "./roleActions.js";
+document.getElementById("endTurnBtn").addEventListener("click", async () => {
+  const endStatus = document.getElementById("endStatus");
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
-      authDomain: "broadgame-9bc04.firebaseapp.com",
-      databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "broadgame-9bc04",
-      storageBucket: "broadgame-9bc04.appspot.com",
-      messagingSenderId: "220150025271",
-      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
-      measurementId: "G-6T9GW9LVD7"
-    };
+  // 設定自己已結束
+  const endRef = ref(db, `rooms/${room}/players/${player}/ended`);
+  await update(endRef, true);
+  endStatus.textContent = "✅ 你已結束今日動作，等待其他玩家...";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase();
+  // 取得所有玩家資料
+  const playersRef = ref(db, `rooms/${room}/players`);
+  const playersSnap = await get(playersRef);
+  const players = playersSnap.val() || {};
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const player = urlParams.get("player");
-    const room = urlParams.get("room");
-
-    document.addEventListener("DOMContentLoaded", async () => {
-      document.getElementById("playerName").textContent = player;
-
-      const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      get(moneyRef).then(async snap => {
-        if (!snap.exists()) {
-          await set(moneyRef, 100);
-        }
-        onValue(moneyRef, snap => {
-          document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
-        });
-      });
-
-      renderRoleUI(player, room);
-      loadMyInvestments();
-
-      // 🔥 自動載入投資對象名單
-      const playersRef = ref(db, `rooms/${room}/players`);
-      onValue(playersRef, (snap) => {
-        const players = snap.val() || {};
-        const targetSelect = document.getElementById("target");
-        const targetStatus = document.getElementById("targetStatus");
-        targetSelect.innerHTML = "";
-        let hasTarget = false;
-
-        for (let name in players) {
-          if (name !== player) {
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            targetSelect.appendChild(option);
-            hasTarget = true;
-          }
-        }
-
-        if (!hasTarget) {
-          targetSelect.innerHTML = `<option disabled selected>無可投資對象</option>`;
-          targetStatus.textContent = "⚠️ 目前房間內沒有其他可投資對象";
-        } else {
-          targetStatus.textContent = "";
-        }
-      });
-
-      // ✅ 結束動作功能
-      document.getElementById("endTurnBtn").addEventListener("click", async () => {
-        const endStatus = document.getElementById("endStatus");
-
-        const endRef = ref(db, `rooms/${room}/players/${player}/ended`);
-        await update(endRef, true);
-        endStatus.textContent = "✅ 你已結束今日動作，等待其他玩家...";
-
-        const playersRef = ref(db, `rooms/${room}/players`);
-        const playersSnap = await get(playersRef);
-        const players = playersSnap.val() || {};
-
-        let allEnded = true;
-        for (let name in players) {
-          if (!players[name].ended) {
-            allEnded = false;
-            break;
-          }
-        }
-
-        if (allEnded) {
-          for (let name in players) {
-            const money = players[name].money || 0;
-            await update(ref(db), {
-              [`rooms/${room}/players/${name}/money`]: money + 100,
-              [`rooms/${room}/players/${name}/ended`]: false
-            });
-          }
-          endStatus.textContent = "🎉 所有人皆已結束！新的一天開始，已發放 $100";
-        }
-      });
-    });
-
-    window.invest = async function () {
-      const target = document.getElementById("target").value;
-      const amount = parseInt(document.getElementById("amount").value);
-      const investStatus = document.getElementById("investStatus");
-
-      if (!target || isNaN(amount) || amount <= 0) {
-        investStatus.textContent = "請輸入正確金額與選擇投資對象";
-        return;
-      }
-
-      const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      const mySnap = await get(myMoneyRef);
-      const myMoney = mySnap.val() || 0;
-
-      if (amount > myMoney) {
-        investStatus.textContent = "💸 餘額不足！";
-        return;
-      }
-
-      await update(ref(db, `rooms/${room}/players/${player}`), {
-        money: myMoney - amount
-      });
-
-      const targetRef = ref(db, `rooms/${room}/players/${target}`);
-      const targetSnap = await get(targetRef);
-      const targetData = targetSnap.val() || {};
-
-      await update(targetRef, {
-        money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
-      });
-
-      const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
-      const myInvestmentSnap = await get(myInvestmentRef);
-      const myInvestments = myInvestmentSnap.val() || {};
-
-      await update(ref(db, `rooms/${room}/players/${player}/myInvestments`), {
-        [target]: (myInvestments[target] || 0) + amount
-      });
-
-      loadMyInvestments();
-
-      investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
+  // 檢查是否所有人都結束
+  let allEnded = true;
+  for (let name in players) {
+    if (!players[name].ended) {
+      allEnded = false;
+      break;
     }
+  }
 
-    function loadMyInvestments() {
-      const myInvestmentsRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
-      onValue(myInvestmentsRef, snap => {
-        const investments = snap.val() || {};
-        const investmentList = document.getElementById("investmentList");
-        investmentList.innerHTML = "";
-
-        if (Object.keys(investments).length === 0) {
-          investmentList.innerHTML = "<p>⚠️ 尚未有投資紀錄</p>";
-          return;
-        }
-
-        for (let target in investments) {
-          const card = document.createElement("div");
-          card.className = "investment-card";
-          card.innerHTML = `
-            <p><strong>對象：</strong> ${target}</p>
-            <p><strong>累積金額：</strong> $${investments[target]}</p>
-          `;
-          investmentList.appendChild(card);
-        }
+  if (allEnded) {
+    // ✅ 所有人都結束：每人加 100 元並重設 ended
+    for (let name in players) {
+      const money = players[name].money || 0;
+      const playerRef = ref(db, `rooms/${room}/players/${name}`);
+      await update(playerRef, {
+        money: money + 100,
+        ended: false
       });
     }
-  </script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      padding: 1rem;
-      max-width: 500px;
-      margin: auto;
-    }
-    .card {
-      background: #fff;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .investment-card {
-      background: #fafafa;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    #investmentList p {
-      margin: 0.5rem 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>玩家：<span id="playerName">載入中...</span></h2>
-    <p>💰 餘額：<strong id="money">$0</strong></p>
-  </div>
-
-  <div class="card" id="rolePanel">
-    <p>正在載入角色資訊...</p>
-  </div>
-
-  <div class="card" id="investPanel">
-    <h3>我要投資：</h3>
-    <label for="target">選擇對象：</label>
-    <select id="target"></select>
-    <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
-
-    <label for="amount">投資金額：</label>
-    <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
-    <button onclick="invest()">確認投資</button>
-    <p id="investStatus"></p>
-
-    <button id="endTurnBtn">結束動作</button>
-    <p id="endStatus" style="color: green;"></p>
-  </div>
-
-  <div class="card" id="investmentHistory">
-    <h3>我的投資紀錄：</h3>
-    <div id="investmentList">
-      <p>尚未有投資紀錄</p>
-    </div>
-  </div>
-</body>
-</html>
+    endStatus.textContent = "🎉 所有人皆已結束！新的一天開始，已發放 $100";
+  }
+});
