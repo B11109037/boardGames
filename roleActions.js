@@ -34,7 +34,7 @@ export async function renderRoleUI(playerName, roomCode) {
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
-          <p>投入金額：$${existing.amount}，剩餘回合：${existing.roundsLeft}</p>
+          <p>剩餘回合：${existing.roundsLeft}</p>
         `;
         return;
       }
@@ -66,8 +66,6 @@ export async function renderRoleUI(playerName, roomCode) {
         <h3>本日代理選項：</h3>
         <p>A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
         <p>B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
-        <label>投入金額：<input type="number" id="agentAmount" placeholder="輸入金額"></label>
-        <br>
         <button id="chooseA">選擇 A</button>
         <button id="chooseB">選擇 B</button>
         <p id="agentStatus" style="color: green;"></p>
@@ -82,37 +80,20 @@ export async function renderRoleUI(playerName, roomCode) {
       });
 
       async function lockAgentOption(option, detail) {
-        const amount = parseInt(document.getElementById("agentAmount").value);
         const status = document.getElementById("agentStatus");
-        if (isNaN(amount) || amount <= 0) {
-          status.style.color = "red";
-          status.textContent = "請輸入有效金額";
-          return;
-        }
-
-        const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-        const moneySnap = await get(moneyRef);
-        const money = moneySnap.exists() ? moneySnap.val() : 0;
-        if (amount > money) {
-          status.style.color = "red";
-          status.textContent = "金額不足，請重新輸入";
-          return;
-        }
 
         await update(ref(db), {
-          [`rooms/${roomCode}/players/${playerName}/money`]: money - amount,
           [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
             option,
             chance: detail.chance,
             multiplier: detail.multiplier,
             roundsLeft: detail.duration,
-            amount,
             locked: true
           }
         });
 
         status.style.color = "green";
-        status.textContent = `✅ 已選擇方案 ${option} 並投入 $${amount}`;
+        status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
         setTimeout(() => location.reload(), 1000);
       }
     });
