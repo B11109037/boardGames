@@ -28,7 +28,7 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      if (existing && (existing.locked === true || existing.locked === "true")) {
+      if (existing && String(existing.locked) === "true") {
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
@@ -54,7 +54,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
           const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
           const moneySnap = await get(moneyRef);
-          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
 
           if (currentMoney < amount) {
             result.style.color = "red";
@@ -62,12 +62,15 @@ export async function renderRoleUI(playerName, roomCode) {
             return;
           }
 
+          // 扣款
+          currentMoney -= amount;
+
           const success = Math.random() * 100 < existing.chance;
-          let finalMoney = currentMoney - amount;
+          let profit = 0;
 
           if (success) {
-            const profit = Math.round(amount * existing.multiplier);
-            finalMoney += profit;
+            profit = Math.round(amount * existing.multiplier);
+            currentMoney += profit;
             result.style.color = "green";
             result.textContent = `✅ 投資成功！你獲得 $${profit}`;
           } else {
@@ -75,7 +78,7 @@ export async function renderRoleUI(playerName, roomCode) {
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
           }
 
-          await update(moneyRef, finalMoney);
+          await update(moneyRef, currentMoney);
         });
         return;
       }
@@ -136,9 +139,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-
-        // 不要 reload，改為刷新畫面
-        renderRoleUI(playerName, roomCode);
+        setTimeout(() => location.reload(), 500);
       }
     });
   }
