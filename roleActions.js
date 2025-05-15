@@ -67,16 +67,16 @@ export async function renderRoleUI(playerName, roomCode) {
 
           if (success) {
             profit = Math.round(amount * existing.multiplier);
+            currentMoney = currentMoney - amount + profit;
             result.style.color = "green";
             result.textContent = `✅ 投資成功！你獲得 $${profit}`;
-            currentMoney = currentMoney - amount + profit;
           } else {
+            currentMoney = currentMoney - amount;
             result.style.color = "red";
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
-            currentMoney = currentMoney - amount;
           }
 
-          await update(moneyRef, { money: currentMoney });
+          await set(moneyRef, currentMoney);
         });
         return;
       }
@@ -116,10 +116,12 @@ export async function renderRoleUI(playerName, roomCode) {
 
       document.getElementById("chooseA").addEventListener("click", async () => {
         await lockAgentOption("A", existing.options.A);
+        renderRoleUI(playerName, roomCode);
       });
 
       document.getElementById("chooseB").addEventListener("click", async () => {
         await lockAgentOption("B", existing.options.B);
+        renderRoleUI(playerName, roomCode);
       });
 
       async function lockAgentOption(option, detail) {
@@ -137,7 +139,6 @@ export async function renderRoleUI(playerName, roomCode) {
 
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-        setTimeout(() => location.reload(), 500);
       }
     });
   }
