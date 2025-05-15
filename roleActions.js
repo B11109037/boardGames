@@ -62,23 +62,21 @@ export async function renderRoleUI(playerName, roomCode) {
             return;
           }
 
-          // 扣款
-          currentMoney -= amount;
-
           const success = Math.random() * 100 < existing.chance;
           let profit = 0;
 
           if (success) {
             profit = Math.round(amount * existing.multiplier);
-            currentMoney += profit;
             result.style.color = "green";
             result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+            currentMoney = currentMoney - amount + profit;
           } else {
             result.style.color = "red";
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
+            currentMoney = currentMoney - amount;
           }
 
-          await update(moneyRef, currentMoney);
+          await update(moneyRef, { money: currentMoney });
         });
         return;
       }
