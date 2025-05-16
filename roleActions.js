@@ -110,4 +110,39 @@ export async function renderRoleUI(playerName, roomCode) {
         <div id="agentOptions">
           <p id="optionA">A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
           <p id="optionB">B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
-          <button id="chooseA">選
+          <button id="chooseA">選擇 A</button>
+          <button id="chooseB">選擇 B</button>
+          <p id="agentStatus" style="color: green;"></p>
+        </div>
+      `;
+
+      // 按鈕綁定事件：鎖定選項
+      document.getElementById("chooseA").addEventListener("click", async () => {
+        await lockAgentOption("A", existing.options.A);
+        renderRoleUI(playerName, roomCode);
+      });
+
+      document.getElementById("chooseB").addEventListener("click", async () => {
+        await lockAgentOption("B", existing.options.B);
+        renderRoleUI(playerName, roomCode);
+      });
+
+      async function lockAgentOption(option, detail) {
+        const status = document.getElementById("agentStatus");
+
+        await update(ref(db), {
+          [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
+            option,
+            chance: detail.chance,
+            multiplier: detail.multiplier,
+            roundsLeft: detail.duration,
+            locked: true
+          }
+        });
+
+        status.style.color = "green";
+        status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
+      }
+    });
+  }
+}
