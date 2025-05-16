@@ -28,7 +28,6 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      // 如果已鎖定方案（顯示已選擇）
       if (existing && String(existing.locked) === "true") {
         section.style.display = "block";
         section.innerHTML = `
@@ -77,8 +76,15 @@ export async function renderRoleUI(playerName, roomCode) {
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
           }
 
-          await set(moneyRef, currentMoney);
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
+          });
+
+          document.getElementById("investAgent").disabled = true;
+          document.getElementById("investAmount").disabled = true;
         });
+
         return;
       }
 
@@ -102,6 +108,7 @@ export async function renderRoleUI(playerName, roomCode) {
         await set(agentOptionRef, existing);
       }
 
+      // 顯示選擇畫面
       section.style.display = "block";
       const optA = existing.options.A;
       const optB = existing.options.B;
@@ -116,7 +123,7 @@ export async function renderRoleUI(playerName, roomCode) {
         </div>
       `;
 
-      // 按鈕綁定事件：鎖定選項
+      // 選擇方案並鎖定
       document.getElementById("chooseA").addEventListener("click", async () => {
         await lockAgentOption("A", existing.options.A);
         renderRoleUI(playerName, roomCode);
@@ -136,7 +143,8 @@ export async function renderRoleUI(playerName, roomCode) {
             chance: detail.chance,
             multiplier: detail.multiplier,
             roundsLeft: detail.duration,
-            locked: true
+            locked: true,
+            invested: false
           }
         });
 
