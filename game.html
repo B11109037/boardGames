@@ -69,48 +69,49 @@
         }
       });
 
-     document.getElementById("endTurnBtn").addEventListener("click", async () => {
-  const endStatus = document.getElementById("endStatus");
+      document.getElementById("endTurnBtn").addEventListener("click", async () => {
+        const endStatus = document.getElementById("endStatus");
 
-  const playerRef = ref(db, `rooms/${room}/players/${player}`);
-  await update(playerRef, { ended: true });
-  endStatus.innerHTML = "<span style='color: green;'>✅ 你已結束今日動作，等待其他玩家...</span>";
+        const playerRef = ref(db, `rooms/${room}/players/${player}`);
+        await update(playerRef, { ended: true });
+        endStatus.innerHTML = "<span style='color: green;'>✅ 你已結束今日動作，等待其他玩家...</span>";
 
-  const playersRef = ref(db, `rooms/${room}/players`);
-  const playersSnap = await get(playersRef);
-  const players = playersSnap.val() || {};
+        const playersRef = ref(db, `rooms/${room}/players`);
+        const playersSnap = await get(playersRef);
+        const players = playersSnap.val() || {};
 
-  let allEnded = true;
-  for (let name in players) {
-    if (!players[name].ended) {
-      allEnded = false;
-      break;
-    }
-  }
+        let allEnded = true;
+        for (let name in players) {
+          if (!players[name].ended) {
+            allEnded = false;
+            break;
+          }
+        }
 
-  if (allEnded) {
-    for (let name in players) {
-      const playerData = players[name];
-      const money = playerData.money || 0;
-      const updateData = {
-        money: money + 100,
-        ended: false
-      };
+        if (allEnded) {
+          for (let name in players) {
+            const playerData = players[name];
+            const money = playerData.money || 0;
+            const updateData = {
+              money: money + 100,
+              ended: false
+            };
 
-      // 若為投資代理人，重設 invested 並減少 roundsLeft
-      if (playerData.role === "投資代理人" && playerData.agentOption) {
-        const currentRounds = playerData.agentOption.roundsLeft || 1;
-        updateData["agentOption/invested"] = false;
-        updateData["agentOption/roundsLeft"] = Math.max(0, currentRounds - 1);
-      }
+            // 如果是投資代理人，重設 invested，並讓 roundsLeft 減 1
+            if (playerData.role === "投資代理人" && playerData.agentOption) {
+              const currentRounds = playerData.agentOption.roundsLeft || 1;
+              updateData["agentOption/invested"] = false;
+              updateData["agentOption/roundsLeft"] = Math.max(0, currentRounds - 1);
+            }
 
-      const pRef = ref(db, `rooms/${room}/players/${name}`);
-      await update(pRef, updateData);
-    }
+            const pRef = ref(db, `rooms/${room}/players/${name}`);
+            await update(pRef, updateData);
+          }
 
-    endStatus.innerHTML = "<span style='color: green;'>🎉 所有人皆已結束！新的一天開始，已發放 $100</span>";
-  }
-});
+          endStatus.innerHTML = "<span style='color: green;'>🎉 所有人皆已結束！新的一天開始，已發放 $100</span>";
+        }
+      });
+    });
 
     window.invest = async function () {
       const target = document.getElementById("target").value;
