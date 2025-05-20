@@ -25,16 +25,16 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 即時監聽代理人資訊
+    // ✅ 即時監聽代理人資料
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
-      section.innerHTML = "";
 
       if (!existing || !existing.locked) {
         await generateOptions();
         return;
       }
 
+      section.innerHTML = "";
       section.style.display = "block";
 
       if (existing.roundsLeft <= 0) {
@@ -105,22 +105,24 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // ✅ 回合自動扣減並重啟方案邏輯（每次所有人 endTurn 時觸發）
+    // ✅ 每回合減少回合數，並更新 invested 狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     onValue(turnEndRef, async (snap) => {
-      const val = snap.val();
-      if (val === true) {
+      if (snap.val() === true) {
         const agentSnap = await get(agentOptionRef);
         const data = agentSnap.val();
-        if (data && data.locked && data.roundsLeft > 0) {
-          await update(agentOptionRef, {
-            roundsLeft: data.roundsLeft - 1,
-            invested: false
-          });
-        } else if (data && data.locked && data.roundsLeft <= 1) {
-          await set(agentOptionRef, null); // 清空，觸發重新生成方案
+        if (data && data.locked) {
+          const newRounds = data.roundsLeft - 1;
+          if (newRounds <= 0) {
+            await set(agentOptionRef, null);
+          } else {
+            await update(agentOptionRef, {
+              roundsLeft: newRounds,
+              invested: false
+            });
+          }
         }
-        await set(turnEndRef, false); // 重設旗標
+        await set(turnEndRef, false);
       }
     });
 
@@ -141,7 +143,6 @@ export async function renderRoleUI(playerName, roomCode) {
         locked: false
       });
 
-      // 顯示選擇畫面
       const section = document.getElementById("agentOptionsSection");
       section.style.display = "block";
       section.innerHTML = `
