@@ -1,5 +1,3 @@
-//role.js可以自動更新回合數
-// role.js
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -18,19 +16,10 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">
-      
-    </div>
+    <div id="roleExtraInfo">...</div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
-
-  const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/rounds`);
-  onValue(roundsRef, (snap) => {
-    const val = snap.val();
-    const el = document.getElementById("roundsInfo");
-    if (el) el.textContent = `剩餘回合：${val ?? 0}`;
-  });
 
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
@@ -39,7 +28,7 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      if (existing && String(existing.locked) === "true") {
+      if (existing?.locked === true) {
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
@@ -53,12 +42,19 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
         `;
 
-        // 即時監聽代理人方案剩餘回合數
         const agentRoundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
         onValue(agentRoundsRef, (snap) => {
           const val = snap.val();
           const el = document.getElementById("agentRoundsLeft");
           if (el) el.textContent = `剩餘回合：${val ?? 0}`;
+        });
+
+        const doneRef = ref(db, `rooms/${roomCode}/players/${playerName}/done`);
+        onValue(doneRef, (doneSnap) => {
+          const done = doneSnap.val() === true;
+          const invested = existing.invested === true;
+          document.getElementById("investAgent").disabled = done || invested;
+          document.getElementById("investAmount").disabled = done || invested;
         });
 
         document.getElementById("investAgent").addEventListener("click", async () => {
@@ -88,27 +84,24 @@ export async function renderRoleUI(playerName, roomCode) {
             profit = Math.round(amount * existing.multiplier);
             currentMoney = currentMoney - amount + profit;
             result.style.color = "green";
-            result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+            result.textContent = `✅ 投資成功！你獲得 $${profit} 💡請記得點擊「結束本回合動作」`;
           } else {
             currentMoney = currentMoney - amount;
             result.style.color = "red";
-            result.textContent = `❌ 投資失敗，損失 $${amount}`;
+            result.textContent = `❌ 投資失敗，損失 $${amount} 💡請記得點擊「結束本回合動作」`;
           }
 
           await update(ref(db), {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
-
-          document.getElementById("investAgent").disabled = true;
-          document.getElementById("investAmount").disabled = true;
         });
 
         return;
       }
 
-      // 尚未選擇方案，產生新選項
-      if (!existing || !existing.options) {
+      // 若方案尚未鎖定 → 產生或重新產生選項
+      if (!existing || !existing.options || existing.locked === false) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
           multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
@@ -127,7 +120,7 @@ export async function renderRoleUI(playerName, roomCode) {
         await set(agentOptionRef, existing);
       }
 
-      // 顯示選擇畫面
+      // 顯示選擇介面
       section.style.display = "block";
       const optA = existing.options.A;
       const optB = existing.options.B;
@@ -142,7 +135,6 @@ export async function renderRoleUI(playerName, roomCode) {
         </div>
       `;
 
-      // 選擇方案並鎖定
       document.getElementById("chooseA").addEventListener("click", async () => {
         await lockAgentOption("A", existing.options.A);
         renderRoleUI(playerName, roomCode);
