@@ -98,9 +98,12 @@ export async function renderRoleUI(playerName, roomCode) {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
+          const doneRef = ref(db, `rooms/${roomCode}/players/${playerName}/done`);
+          onValue(doneRef, (doneSnap) => {
+            const done = doneSnap.val() === true;
+            document.getElementById("investAgent").disabled = done || existing.invested === true;
+            document.getElementById("investAmount").disabled = done || existing.invested === true;
 
-          document.getElementById("investAgent").disabled = true;
-          document.getElementById("investAmount").disabled = true;
         });
 
         return;
