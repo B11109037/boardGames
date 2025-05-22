@@ -1,3 +1,4 @@
+//role.js
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -25,16 +26,16 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // 防止遞迴觸發
+    // ✅ 即時監聽代理人資料
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
 
       if (!existing || !existing.locked) {
-        if (existing?.options) return;
         await generateOptions();
         return;
       }
 
+      section.innerHTML = "";
       section.style.display = "block";
 
       if (existing.roundsLeft <= 0) {
@@ -47,7 +48,6 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      // ✅ 渲染投資 UI
       section.innerHTML = `
         <h3>你已選擇方案 ${existing.option}</h3>
         <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
@@ -60,65 +60,53 @@ export async function renderRoleUI(playerName, roomCode) {
         </div>
       `;
 
-      // ✅ 投資按鈕綁定，確保每次重新取得最新的 DOM
       if (!existing.invested) {
-        setTimeout(() => {
-          const btn = document.getElementById("investAgent");
-          btn.addEventListener("click", async () => {
-            const amountInput = document.getElementById("investAmount");
-            const result = document.getElementById("investResult");
-            const amount = parseInt(amountInput.value);
+        document.getElementById("investAgent").addEventListener("click", async () => {
+          const amount = parseInt(document.getElementById("investAmount").value);
+          const result = document.getElementById("investResult");
 
-            if (isNaN(amount) || amount <= 0) {
-              result.style.color = "red";
-              result.textContent = "請輸入有效金額！";
-              return;
-            }
+          if (isNaN(amount) || amount <= 0) {
+            result.style.color = "red";
+            result.textContent = "請輸入有效金額！";
+            return;
+          }
 
-            try {
-              const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-              const moneySnap = await get(moneyRef);
-              let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
 
-              if (currentMoney < amount) {
-                result.style.color = "red";
-                result.textContent = "💸 餘額不足！";
-                return;
-              }
+          if (currentMoney < amount) {
+            result.style.color = "red";
+            result.textContent = "💸 餘額不足！";
+            return;
+          }
 
-              const success = Math.random() * 100 < existing.chance;
-              let profit = 0;
+          const success = Math.random() * 100 < existing.chance;
+          let profit = 0;
 
-              if (success) {
-                profit = Math.round(amount * existing.multiplier);
-                currentMoney = currentMoney - amount + profit;
-                result.style.color = "green";
-                result.textContent = `✅ 投資成功！你獲得 $${profit}`;
-              } else {
-                currentMoney = currentMoney - amount;
-                result.style.color = "red";
-                result.textContent = `❌ 投資失敗，損失 $${amount}`;
-              }
+          if (success) {
+            profit = Math.round(amount * existing.multiplier);
+            currentMoney = currentMoney - amount + profit;
+            result.style.color = "green";
+            result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+          } else {
+            currentMoney = currentMoney - amount;
+            result.style.color = "red";
+            result.textContent = `❌ 投資失敗，損失 $${amount}`;
+          }
 
-              await update(ref(db), {
-                [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
-                [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
-              });
-
-              // ✅ 投資完 disable 元件
-              btn.disabled = true;
-              amountInput.disabled = true;
-            } catch (err) {
-              console.error("投資錯誤：", err);
-              result.style.color = "red";
-              result.textContent = "❌ 發生錯誤，請稍後再試。";
-            }
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
-        }, 100); // 確保 DOM 完成後再綁定事件
+
+          document.getElementById("investAgent").disabled = true;
+          document.getElementById("investAmount").disabled = true;
+        });
       }
     });
 
-    // 回合結束處理 roundsLeft
+    // ✅ 每回合減少回合數，並更新 invested 狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     onValue(turnEndRef, async (snap) => {
       if (snap.val() === true) {
@@ -139,7 +127,6 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // 產生兩個選項
     async function generateOptions() {
       const optionA = {
         chance: Math.floor(Math.random() * 51) + 50,
