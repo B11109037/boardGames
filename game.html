@@ -16,7 +16,8 @@
       projectId: "broadgame-9bc04",
       storageBucket: "broadgame-9bc04.appspot.com",
       messagingSenderId: "220150025271",
-      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2"
+      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
+      measurementId: "G-6T9GW9LVD7"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -73,7 +74,7 @@
 
         const playerRef = ref(db, `rooms/${room}/players/${player}`);
         await update(playerRef, { ended: true });
-        endStatus.innerHTML = "✅ 你已結束今日動作，等待其他玩家...";
+        endStatus.innerHTML = "<span style='color: green;'>✅ 你已結束今日動作，等待其他玩家...</span>";
 
         const playersRef = ref(db, `rooms/${room}/players`);
         const playersSnap = await get(playersRef);
@@ -89,17 +90,25 @@
 
         if (allEnded) {
           for (let name in players) {
-            const money = players[name].money || 0;
-            await update(ref(db, `rooms/${room}/players/${name}`), {
+            const playerData = players[name];
+            const money = playerData.money || 0;
+            const updateData = {
               money: money + 100,
               ended: false
-            });
+            };
+
+            // 如果是投資代理人，重設 invested，並讓 roundsLeft 減 1
+            if (playerData.role === "投資代理人" && playerData.agentOption) {
+              const currentRounds = playerData.agentOption.roundsLeft || 1;
+              updateData["agentOption/invested"] = false;
+              updateData["agentOption/roundsLeft"] = Math.max(0, currentRounds - 1);
+            }
+
+            const pRef = ref(db, `rooms/${room}/players/${name}`);
+            await update(pRef, updateData);
           }
 
-          // ✅ 通知代理人角色回合結束
-          await set(ref(db, `rooms/${room}/turnEnded`), true);
-
-          endStatus.innerHTML = "🎉 所有人皆已結束！新的一天開始，已發放 $100";
+          endStatus.innerHTML = "<span style='color: green;'>🎉 所有人皆已結束！新的一天開始，已發放 $100</span>";
         }
       });
     });
@@ -140,12 +149,13 @@
       const myInvestmentSnap = await get(myInvestmentRef);
       const myInvestments = myInvestmentSnap.val() || {};
 
-      await update(myInvestmentRef, {
+      await update(ref(db, `rooms/${room}/players/${player}/myInvestments`), {
         [target]: (myInvestments[target] || 0) + amount
       });
 
       loadMyInvestments();
-      investStatus.innerHTML = `✅ 成功投資 ${target} $${amount}`;
+
+      investStatus.innerHTML = `<span style='color: green;'>✅ 成功投資 ${target} $${amount}</span>`;
     }
 
     function loadMyInvestments() {
