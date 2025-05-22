@@ -18,7 +18,7 @@ export async function renderRoleUI(playerName, roomCode) {
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
     <div id="roleExtraInfo">
-      <p id="roundsInfo">剩餘回合：--</p>
+      
     </div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
