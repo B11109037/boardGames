@@ -58,12 +58,15 @@ export async function renderRoleUI(playerName, roomCode) {
         });
 
         document.getElementById("investAgent").addEventListener("click", async () => {
+          const investBtn = document.getElementById("investAgent");
+          investBtn.disabled = true; // ⛔ 預防多次點擊
           const amount = parseInt(document.getElementById("investAmount").value);
           const result = document.getElementById("investResult");
 
           if (isNaN(amount) || amount <= 0) {
             result.style.color = "red";
             result.textContent = "請輸入有效金額！";
+            investBtn.disabled = false;
             return;
           }
 
@@ -74,6 +77,7 @@ export async function renderRoleUI(playerName, roomCode) {
           if (currentMoney < amount) {
             result.style.color = "red";
             result.textContent = "💸 餘額不足！";
+            investBtn.disabled = false;
             return;
           }
 
@@ -95,12 +99,17 @@ export async function renderRoleUI(playerName, roomCode) {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
+
+          // ✅ 修正重點：立即更新本地狀態與按鈕
+          existing.invested = true;
+          document.getElementById("investAmount").disabled = true;
+          investBtn.disabled = true;
         });
 
         return;
       }
 
-      // 若方案尚未鎖定 → 產生或重新產生選項
+      // 若尚未選擇方案（或已重置）
       if (!existing || !existing.options || existing.locked === false) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
@@ -120,7 +129,7 @@ export async function renderRoleUI(playerName, roomCode) {
         await set(agentOptionRef, existing);
       }
 
-      // 顯示選擇介面
+      // 顯示方案選擇畫面
       section.style.display = "block";
       const optA = existing.options.A;
       const optB = existing.options.B;
