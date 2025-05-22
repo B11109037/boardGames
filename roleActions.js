@@ -1,18 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getDatabase, ref, get, onValue, update, set, off } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
-  authDomain: "broadgame-9bc04.firebaseapp.com",
-  databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "broadgame-9bc04",
-  storageBucket: "broadgame-9bc04.appspot.com",
-  messagingSenderId: "220150025271",
-  appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
-  measurementId: "G-6T9GW9LVD7"
-};
-
-const app = initializeApp(firebaseConfig);
+//role.js 5/22可以用
+import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
@@ -39,19 +26,16 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    const agentSnap = await get(agentOptionRef);
-    const data = agentSnap.val();
-    if (!data || !data.locked) {
-      await generateOptions();
-    }
-
-    off(agentOptionRef);
+    // ✅ 即時監聽代理人資料
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
+
+      if (!existing || !existing.locked) {
+        await generateOptions();
+        return;
+      }
+
       section.innerHTML = "";
-
-      if (!existing || !existing.locked) return;
-
       section.style.display = "block";
 
       if (existing.roundsLeft <= 0) {
@@ -77,13 +61,8 @@ export async function renderRoleUI(playerName, roomCode) {
       `;
 
       if (!existing.invested) {
-        const investButton = document.getElementById("investAgent");
-        const investInput = document.getElementById("investAmount");
-
-        investButton.addEventListener("click", async () => {
-          investButton.disabled = true;
-          investInput.disabled = true;
-          const amount = parseInt(investInput.value);
+        document.getElementById("investAgent").addEventListener("click", async () => {
+          const amount = parseInt(document.getElementById("investAmount").value);
           const result = document.getElementById("investResult");
 
           if (isNaN(amount) || amount <= 0) {
@@ -116,29 +95,33 @@ export async function renderRoleUI(playerName, roomCode) {
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
           }
 
-          const playerRef = ref(db, `rooms/${roomCode}/players/${playerName}`);
-          await update(playerRef, {
-            money: currentMoney,
-            "agentOption/invested": true
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
+
+          document.getElementById("investAgent").disabled = true;
+          document.getElementById("investAmount").disabled = true;
         });
       }
     });
 
+    // ✅ 每回合減少回合數，並更新 invested 狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
-    off(turnEndRef);
     onValue(turnEndRef, async (snap) => {
-      const val = snap.val();
-      if (val === true) {
+      if (snap.val() === true) {
         const agentSnap = await get(agentOptionRef);
         const data = agentSnap.val();
-        if (data && data.locked && data.roundsLeft > 0) {
-          await update(agentOptionRef, {
-            roundsLeft: data.roundsLeft - 1,
-            invested: false
-          });
-        } else if (data && data.locked && data.roundsLeft <= 1) {
-          await set(agentOptionRef, null);
+        if (data && data.locked) {
+          const newRounds = data.roundsLeft - 1;
+          if (newRounds <= 0) {
+            await set(agentOptionRef, null);
+          } else {
+            await update(agentOptionRef, {
+              roundsLeft: newRounds,
+              invested: false
+            });
+          }
         }
         await set(turnEndRef, false);
       }
@@ -161,6 +144,7 @@ export async function renderRoleUI(playerName, roomCode) {
         locked: false
       });
 
+      const section = document.getElementById("agentOptionsSection");
       section.style.display = "block";
       section.innerHTML = `
         <h3>本日代理選項：</h3>
