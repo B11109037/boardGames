@@ -1,4 +1,4 @@
-//role.js
+// role.js
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -17,10 +17,19 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">...</div>
+    <div id="roleExtraInfo">
+      <p id="roundsInfo">剩餘回合：--</p>
+    </div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
+
+  const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/rounds`);
+  onValue(roundsRef, (snap) => {
+    const val = snap.val();
+    const el = document.getElementById("roundsInfo");
+    if (el) el.textContent = `剩餘回合：${val ?? 0}`;
+  });
 
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
@@ -34,7 +43,7 @@ export async function renderRoleUI(playerName, roomCode) {
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
-          <p>剩餘回合：${existing.roundsLeft}</p>
+          <p id="agentRoundsLeft">剩餘回合：${existing.roundsLeft}</p>
           <div class="card" style="margin-top: 10px;">
             <label for="investAmount">投入金額：</label>
             <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
@@ -42,6 +51,14 @@ export async function renderRoleUI(playerName, roomCode) {
             <p id="investResult" style="color: green;"></p>
           </div>
         `;
+
+        // 即時監聽代理人方案剩餘回合數
+        const agentRoundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
+        onValue(agentRoundsRef, (snap) => {
+          const val = snap.val();
+          const el = document.getElementById("agentRoundsLeft");
+          if (el) el.textContent = `剩餘回合：${val ?? 0}`;
+        });
 
         document.getElementById("investAgent").addEventListener("click", async () => {
           const amount = parseInt(document.getElementById("investAmount").value);
