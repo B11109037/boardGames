@@ -42,27 +42,31 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
         `;
 
-        const agentRoundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
-        onValue(agentRoundsRef, (snap) => {
-          const val = snap.val();
+        const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
+        onValue(roundsRef, snap => {
           const el = document.getElementById("agentRoundsLeft");
-          if (el) el.textContent = `剩餘回合：${val ?? 0}`;
+          if (el) el.textContent = `剩餘回合：${snap.val() ?? 0}`;
         });
 
-        const doneRef = ref(db, `rooms/${roomCode}/players/${playerName}/done`);
-        onValue(doneRef, (doneSnap) => {
-          const done = doneSnap.val() === true;
-          const invested = existing.invested === true;
-          document.getElementById("investAgent").disabled = done || invested;
-          document.getElementById("investAmount").disabled = done || invested;
+        // ✅ 關鍵修正：即時監聽 invested 狀態來控制按鈕
+        onValue(agentOptionRef, (snap) => {
+          const current = snap.val() || {};
+          const invested = current.invested === true;
+          const investBtn = document.getElementById("investAgent");
+          const amountInput = document.getElementById("investAmount");
+          if (investBtn && amountInput) {
+            investBtn.disabled = invested;
+            amountInput.disabled = invested;
+          }
         });
 
         document.getElementById("investAgent").addEventListener("click", async () => {
           const investBtn = document.getElementById("investAgent");
-          investBtn.disabled = true; // ⛔ 預防多次點擊
-          const amount = parseInt(document.getElementById("investAmount").value);
+          const amountInput = document.getElementById("investAmount");
           const result = document.getElementById("investResult");
+          investBtn.disabled = true;
 
+          const amount = parseInt(amountInput.value);
           if (isNaN(amount) || amount <= 0) {
             result.style.color = "red";
             result.textContent = "請輸入有效金額！";
@@ -83,33 +87,27 @@ export async function renderRoleUI(playerName, roomCode) {
 
           const success = Math.random() * 100 < existing.chance;
           let profit = 0;
-
           if (success) {
             profit = Math.round(amount * existing.multiplier);
             currentMoney = currentMoney - amount + profit;
             result.style.color = "green";
-            result.textContent = `✅ 投資成功！你獲得 $${profit} 💡請記得點擊「結束本回合動作」`;
+            result.textContent = `✅ 投資成功！你獲得 $${profit} 💡請點擊「結束本回合動作」`;
           } else {
             currentMoney = currentMoney - amount;
             result.style.color = "red";
-            result.textContent = `❌ 投資失敗，損失 $${amount} 💡請記得點擊「結束本回合動作」`;
+            result.textContent = `❌ 投資失敗，損失 $${amount} 💡請點擊「結束本回合動作」`;
           }
 
           await update(ref(db), {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
-
-          // ✅ 修正重點：立即更新本地狀態與按鈕
-          existing.invested = true;
-          document.getElementById("investAmount").disabled = true;
-          investBtn.disabled = true;
         });
 
         return;
       }
 
-      // 若尚未選擇方案（或已重置）
+      // 尚未選擇方案 → 建立新選項
       if (!existing || !existing.options || existing.locked === false) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
@@ -129,7 +127,7 @@ export async function renderRoleUI(playerName, roomCode) {
         await set(agentOptionRef, existing);
       }
 
-      // 顯示方案選擇畫面
+      // 顯示選擇選項
       section.style.display = "block";
       const optA = existing.options.A;
       const optB = existing.options.B;
