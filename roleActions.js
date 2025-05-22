@@ -1,246 +1,178 @@
-//game.html
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>角色桌遊主頁面</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from "./roleActions.js";
+//role.js
+import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
-      authDomain: "broadgame-9bc04.firebaseapp.com",
-      databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "broadgame-9bc04",
-      storageBucket: "broadgame-9bc04.appspot.com",
-      messagingSenderId: "220150025271",
-      appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
-      measurementId: "G-6T9GW9LVD7"
-    };
+export async function renderRoleUI(playerName, roomCode) {
+  const db = getDatabase();
+  const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
+  const roleSnap = await get(roleRef);
+  const rolePanel = document.getElementById("rolePanel");
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase();
+  if (!roleSnap.exists()) {
+    rolePanel.innerHTML = `<p>❌ 無法讀取角色資訊</p>`;
+    return;
+  }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const player = urlParams.get("player");
-    const room = urlParams.get("room");
+  const role = roleSnap.val();
 
-    document.addEventListener("DOMContentLoaded", async () => {
-      document.getElementById("playerName").textContent = player;
+  rolePanel.innerHTML = `
+    <h3>角色資訊</h3>
+    <div id="role">${role}</div>
+    <div id="roleExtraInfo">...</div>
+    <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
+    <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
+  `;
 
-      const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      get(moneyRef).then(async snap => {
-        if (!snap.exists()) {
-          await set(moneyRef, 100);
-        }
-        onValue(moneyRef, snap => {
-          document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
+  if (role === "投資代理人") {
+    const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
+    const section = document.getElementById("agentOptionsSection");
+
+    // ✅ 即時監聽代理人資料
+    onValue(agentOptionRef, async (snap) => {
+      const existing = snap.val();
+
+      if (!existing || !existing.locked) {
+        await generateOptions();
+        return;
+      }
+
+      section.innerHTML = "";
+      section.style.display = "block";
+
+      if (existing.roundsLeft <= 0) {
+        section.innerHTML = `
+          <h3>你已選擇方案 ${existing.option}</h3>
+          <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
+          <p>剩餘回合：0</p>
+          <p style="color:red;">本方案已結束，請等待新代理任務。</p>
+        `;
+        return;
+      }
+
+      section.innerHTML = `
+        <h3>你已選擇方案 ${existing.option}</h3>
+        <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
+        <p>剩餘回合：${existing.roundsLeft}</p>
+        <div class="card" style="margin-top: 10px;">
+          <label for="investAmount">投入金額：</label>
+          <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
+          <button id="investAgent">確認投資</button>
+          <p id="investResult" style="color: green;"></p>
+        </div>
+      `;
+
+      if (!existing.invested) {
+        document.getElementById("investAgent").addEventListener("click", async () => {
+          const amount = parseInt(document.getElementById("investAmount").value);
+          const result = document.getElementById("investResult");
+
+          if (isNaN(amount) || amount <= 0) {
+            result.style.color = "red";
+            result.textContent = "請輸入有效金額！";
+            return;
+          }
+
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+          if (currentMoney < amount) {
+            result.style.color = "red";
+            result.textContent = "💸 餘額不足！";
+            return;
+          }
+
+          const success = Math.random() * 100 < existing.chance;
+          let profit = 0;
+
+          if (success) {
+            profit = Math.round(amount * existing.multiplier);
+            currentMoney = currentMoney - amount + profit;
+            result.style.color = "green";
+            result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+          } else {
+            currentMoney = currentMoney - amount;
+            result.style.color = "red";
+            result.textContent = `❌ 投資失敗，損失 $${amount}`;
+          }
+
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
+          });
+
+          document.getElementById("investAgent").disabled = true;
+          document.getElementById("investAmount").disabled = true;
         });
-      });
-
-      renderRoleUI(player, room);
-      loadMyInvestments();
-
-      const playersRef = ref(db, `rooms/${room}/players`);
-      onValue(playersRef, (snap) => {
-        const players = snap.val() || {};
-        const targetSelect = document.getElementById("target");
-        const targetStatus = document.getElementById("targetStatus");
-        targetSelect.innerHTML = "";
-        let hasTarget = false;
-
-        for (let name in players) {
-          if (name !== player) {
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            targetSelect.appendChild(option);
-            hasTarget = true;
-          }
-        }
-
-        if (!hasTarget) {
-          targetSelect.innerHTML = `<option disabled selected>無可投資對象</option>`;
-          targetStatus.textContent = "⚠️ 目前房間內沒有其他可投資對象";
-        } else {
-          targetStatus.textContent = "";
-        }
-      });
-
-      document.getElementById("endTurnBtn").addEventListener("click", async () => {
-        const endStatus = document.getElementById("endStatus");
-
-        const playerRef = ref(db, `rooms/${room}/players/${player}`);
-        await update(playerRef, { ended: true });
-        endStatus.innerHTML = "<span style='color: green;'>✅ 你已結束今日動作，等待其他玩家...</span>";
-
-        const playersRef = ref(db, `rooms/${room}/players`);
-        const playersSnap = await get(playersRef);
-        const players = playersSnap.val() || {};
-
-        let allEnded = true;
-        for (let name in players) {
-          if (!players[name].ended) {
-            allEnded = false;
-            break;
-          }
-        }
-
-        if (allEnded) {
-          for (let name in players) {
-            const playerData = players[name];
-            const money = playerData.money || 0;
-            const updateData = {
-              money: money + 100,
-              ended: false
-            };
-
-            // 如果是投資代理人，重設 invested，並讓 roundsLeft 減 1
-            if (playerData.role === "投資代理人" && playerData.agentOption) {
-              const currentRounds = playerData.agentOption.roundsLeft || 1;
-              updateData["agentOption/invested"] = false;
-              updateData["agentOption/roundsLeft"] = Math.max(0, currentRounds - 1);
-            }
-
-            const pRef = ref(db, `rooms/${room}/players/${name}`);
-            await update(pRef, updateData);
-          }
-
-          endStatus.innerHTML = "<span style='color: green;'>🎉 所有人皆已結束！新的一天開始，已發放 $100</span>";
-        }
-      });
+      }
     });
 
-    window.invest = async function () {
-      const target = document.getElementById("target").value;
-      const amount = parseInt(document.getElementById("amount").value);
-      const investStatus = document.getElementById("investStatus");
-
-      if (!target || isNaN(amount) || amount <= 0) {
-        investStatus.textContent = "請輸入正確金額與選擇投資對象";
-        return;
-      }
-
-      const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-      const mySnap = await get(myMoneyRef);
-      const myMoney = mySnap.val() || 0;
-
-      if (amount > myMoney) {
-        investStatus.textContent = "💸 餘額不足！";
-        return;
-      }
-
-      await update(ref(db, `rooms/${room}/players/${player}`), {
-        money: myMoney - amount
-      });
-
-      const targetRef = ref(db, `rooms/${room}/players/${target}`);
-      const targetSnap = await get(targetRef);
-      const targetData = targetSnap.val() || {};
-
-      await update(targetRef, {
-        money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
-      });
-
-      const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
-      const myInvestmentSnap = await get(myInvestmentRef);
-      const myInvestments = myInvestmentSnap.val() || {};
-
-      await update(ref(db, `rooms/${room}/players/${player}/myInvestments`), {
-        [target]: (myInvestments[target] || 0) + amount
-      });
-
-      loadMyInvestments();
-
-      investStatus.innerHTML = `<span style='color: green;'>✅ 成功投資 ${target} $${amount}</span>`;
-    }
-
-    function loadMyInvestments() {
-      const myInvestmentsRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
-      onValue(myInvestmentsRef, snap => {
-        const investments = snap.val() || {};
-        const investmentList = document.getElementById("investmentList");
-        investmentList.innerHTML = "";
-
-        if (Object.keys(investments).length === 0) {
-          investmentList.innerHTML = "<p>⚠️ 尚未有投資紀錄</p>";
-          return;
+    // ✅ 每回合減少回合數，並更新 invested 狀態
+    const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
+    onValue(turnEndRef, async (snap) => {
+      if (snap.val() === true) {
+        const agentSnap = await get(agentOptionRef);
+        const data = agentSnap.val();
+        if (data && data.locked) {
+          const newRounds = data.roundsLeft - 1;
+          if (newRounds <= 0) {
+            await set(agentOptionRef, null);
+          } else {
+            await update(agentOptionRef, {
+              roundsLeft: newRounds,
+              invested: false
+            });
+          }
         }
+        await set(turnEndRef, false);
+      }
+    });
 
-        for (let target in investments) {
-          const card = document.createElement("div");
-          card.className = "investment-card";
-          card.innerHTML = `
-            <p><strong>對象：</strong> ${target}</p>
-            <p><strong>累積金額：</strong> $${investments[target]}</p>
-          `;
-          investmentList.appendChild(card);
-        }
+    async function generateOptions() {
+      const optionA = {
+        chance: Math.floor(Math.random() * 51) + 50,
+        multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
+        duration: Math.floor(Math.random() * 4) + 1
+      };
+      const optionB = {
+        chance: Math.floor(Math.random() * 31) + 20,
+        multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
+        duration: Math.floor(Math.random() * 4) + 1
+      };
+
+      await set(agentOptionRef, {
+        options: { A: optionA, B: optionB },
+        locked: false
+      });
+
+      const section = document.getElementById("agentOptionsSection");
+      section.style.display = "block";
+      section.innerHTML = `
+        <h3>本日代理選項：</h3>
+        <p>A：成功機率 ${optionA.chance}%、回報 ${optionA.multiplier} 倍、持續 ${optionA.duration} 回合</p>
+        <p>B：成功機率 ${optionB.chance}%、回報 ${optionB.multiplier} 倍、持續 ${optionB.duration} 回合</p>
+        <button id="chooseA">選擇 A</button>
+        <button id="chooseB">選擇 B</button>
+        <p id="agentStatus" style="color: green;"></p>
+      `;
+
+      document.getElementById("chooseA").addEventListener("click", async () => {
+        await lockOption("A", optionA);
+      });
+
+      document.getElementById("chooseB").addEventListener("click", async () => {
+        await lockOption("B", optionB);
       });
     }
-  </script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f0f0;
-      padding: 1rem;
-      max-width: 500px;
-      margin: auto;
+
+    async function lockOption(option, detail) {
+      await set(agentOptionRef, {
+        option,
+        chance: detail.chance,
+        multiplier: detail.multiplier,
+        roundsLeft: detail.duration,
+        locked: true,
+        invested: false
+      });
     }
-    .card {
-      background: #fff;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .investment-card {
-      background: #fafafa;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    #investmentList p {
-      margin: 0.5rem 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>玩家：<span id="playerName">載入中...</span></h2>
-    <p>💰 餘額：<strong id="money">$0</strong></p>
-  </div>
-
-  <div class="card" id="rolePanel">
-    <p>正在載入角色資訊...</p>
-  </div>
-
-  <div class="card" id="investPanel">
-    <h3>我要投資：</h3>
-    <label for="target">選擇對象：</label>
-    <select id="target"></select>
-    <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
-
-    <label for="amount">投資金額：</label>
-    <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
-    <button onclick="invest()">確認投資</button>
-    <p id="investStatus"></p>
-
-    <button id="endTurnBtn">結束動作</button>
-    <p id="endStatus"></p>
-  </div>
-
-  <div class="card" id="investmentHistory">
-    <h3>我的投資紀錄：</h3>
-    <div id="investmentList">
-      <p>尚未有投資紀錄</p>
-    </div>
-  </div>
-</body>
-</html>
+  }
+}
