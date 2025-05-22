@@ -23,14 +23,14 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 第一次檢查是否已有選項，若無就生成
     const agentSnap = await get(agentOptionRef);
     const data = agentSnap.val();
     if (!data || !data.locked) {
       await generateOptions();
     }
 
-    // ✅ 再來才做即時監聽，避免觸發 loop
+    // 只監聽一次，並先移除舊監聽（防止遞迴）
+    off(agentOptionRef);
     onValue(agentOptionRef, (snap) => {
       const existing = snap.val();
       if (!existing || !existing.locked) return;
@@ -107,8 +107,9 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // ✅ 每回合結束時更新 roundsLeft 與 invested 狀態
+    // 每回合結束時更新狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
+    off(turnEndRef);
     onValue(turnEndRef, async (snap) => {
       if (snap.val() === true) {
         const agentSnap = await get(agentOptionRef);
