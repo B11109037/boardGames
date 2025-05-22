@@ -74,16 +74,7 @@
             const remainingRounds = (data.rounds || 1) - 1;
 
             await update(ref(db), {
-              [`rooms/${room}/players/${name}/money`]: newMoney,
-              [`rooms/${room}/players/${name}/done`]: false,
-              [`rooms/${room}/players/${name}/rounds`]: remainingRounds < 0 ? 0 : remainingRounds,
-              [`rooms/${room}/players/${name}/agentChoice`]: null,
-              [`rooms/${room}/players/${name}/agentResult`]: null
-            });
-          }
-          const endRoundNotice = document.getElementById("endRoundNotice");
-          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並重置投資選擇與回合數 -1！";
-          endRoundNotice.style.display = "block";
+              [`rooms/${room
         }/players/${name}/money`]: newMoney,
               [`rooms/${room}/players/${name}/done`]: false
             });
