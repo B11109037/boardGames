@@ -1,4 +1,3 @@
-// role.js
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -17,9 +16,7 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">
-      
-    </div>
+    <div id="roleExtraInfo"></div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
@@ -52,12 +49,21 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
         `;
 
-        // 即時監聽代理人方案剩餘回合數
+        // 即時監聽方案剩餘回合
         const agentRoundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
         onValue(agentRoundsRef, (snap) => {
           const val = snap.val();
           const el = document.getElementById("agentRoundsLeft");
           if (el) el.textContent = `剩餘回合：${val ?? 0}`;
+        });
+
+        // 🔄 每回合根據 done 狀態啟用或停用按鈕
+        const doneRef = ref(db, `rooms/${roomCode}/players/${playerName}/done`);
+        onValue(doneRef, (doneSnap) => {
+          const done = doneSnap.val() === true;
+          const invested = existing.invested === true;
+          document.getElementById("investAgent").disabled = done || invested;
+          document.getElementById("investAmount").disabled = done || invested;
         });
 
         document.getElementById("investAgent").addEventListener("click", async () => {
@@ -87,23 +93,17 @@ export async function renderRoleUI(playerName, roomCode) {
             profit = Math.round(amount * existing.multiplier);
             currentMoney = currentMoney - amount + profit;
             result.style.color = "green";
-            result.textContent = `✅ 投資成功！你獲得 $${profit}`;
+            result.textContent = `✅ 投資成功！你獲得 $${profit}　💡 請記得點擊下方『結束本回合動作』`;
           } else {
             currentMoney = currentMoney - amount;
             result.style.color = "red";
-            result.textContent = `❌ 投資失敗，損失 $${amount}`;
+            result.textContent = `❌ 投資失敗，損失 $${amount}　💡 請記得點擊下方『結束本回合動作』`;
           }
 
           await update(ref(db), {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
-          const doneRef = ref(db, `rooms/${roomCode}/players/${playerName}/done`);
-          onValue(doneRef, (doneSnap) => {
-            const done = doneSnap.val() === true;
-            document.getElementById("investAgent").disabled = done || existing.invested === true;
-            document.getElementById("investAmount").disabled = done || existing.invested === true;
-
         });
 
         return;
