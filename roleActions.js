@@ -1,3 +1,5 @@
+import { getDatabase, ref, get, onValue, update, set, off } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
 export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
   const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
@@ -23,19 +25,21 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
+    // ✅ 僅初始化時檢查一次並產生選項
     const agentSnap = await get(agentOptionRef);
     const data = agentSnap.val();
     if (!data || !data.locked) {
       await generateOptions();
     }
 
-    // 只監聽一次，並先移除舊監聽（防止遞迴）
+    // ✅ 移除舊的監聽再綁定
     off(agentOptionRef);
-    onValue(agentOptionRef, (snap) => {
+    onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
+      section.innerHTML = "";
+
       if (!existing || !existing.locked) return;
 
-      section.innerHTML = "";
       section.style.display = "block";
 
       if (existing.roundsLeft <= 0) {
@@ -61,8 +65,13 @@ export async function renderRoleUI(playerName, roomCode) {
       `;
 
       if (!existing.invested) {
-        document.getElementById("investAgent").addEventListener("click", async () => {
-          const amount = parseInt(document.getElementById("investAmount").value);
+        const investButton = document.getElementById("investAgent");
+        const investInput = document.getElementById("investAmount");
+
+        investButton.addEventListener("click", async () => {
+          investButton.disabled = true;
+          investInput.disabled = true;
+          const amount = parseInt(investInput.value);
           const result = document.getElementById("investResult");
 
           if (isNaN(amount) || amount <= 0) {
@@ -100,30 +109,25 @@ export async function renderRoleUI(playerName, roomCode) {
             money: currentMoney,
             "agentOption/invested": true
           });
-
-          document.getElementById("investAgent").disabled = true;
-          document.getElementById("investAmount").disabled = true;
         });
       }
     });
 
-    // 每回合結束時更新狀態
+    // ✅ 每回合結束更新狀態（防止重複監聽）
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     off(turnEndRef);
     onValue(turnEndRef, async (snap) => {
-      if (snap.val() === true) {
+      const val = snap.val();
+      if (val === true) {
         const agentSnap = await get(agentOptionRef);
         const data = agentSnap.val();
-        if (data && data.locked) {
-          const newRounds = data.roundsLeft - 1;
-          if (newRounds <= 0) {
-            await set(agentOptionRef, null);
-          } else {
-            await update(agentOptionRef, {
-              roundsLeft: newRounds,
-              invested: false
-            });
-          }
+        if (data && data.locked && data.roundsLeft > 0) {
+          await update(agentOptionRef, {
+            roundsLeft: data.roundsLeft - 1,
+            invested: false
+          });
+        } else if (data && data.locked && data.roundsLeft <= 1) {
+          await set(agentOptionRef, null);
         }
         await set(turnEndRef, false);
       }
@@ -146,7 +150,6 @@ export async function renderRoleUI(playerName, roomCode) {
         locked: false
       });
 
-      const section = document.getElementById("agentOptionsSection");
       section.style.display = "block";
       section.innerHTML = `
         <h3>本日代理選項：</h3>
