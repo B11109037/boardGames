@@ -1,3 +1,4 @@
+//role.js
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -25,6 +26,7 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
+    // ✅ 即時監聽代理人資料
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
 
@@ -56,7 +58,6 @@ export async function renderRoleUI(playerName, roomCode) {
           <button id="investAgent">確認投資</button>
           <p id="investResult" style="color: green;"></p>
         </div>
-        <div id="rewardPanel"></div>
       `;
 
       if (!existing.invested) {
@@ -101,13 +102,11 @@ export async function renderRoleUI(playerName, roomCode) {
 
           document.getElementById("investAgent").disabled = true;
           document.getElementById("investAmount").disabled = true;
-
-          // ✅ 顯示分配面板
-          showRewardPanel(playerName, roomCode);
         });
       }
     });
 
+    // ✅ 每回合減少回合數，並更新 invested 狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     onValue(turnEndRef, async (snap) => {
       if (snap.val() === true) {
@@ -116,13 +115,6 @@ export async function renderRoleUI(playerName, roomCode) {
         if (data && data.locked) {
           const newRounds = data.roundsLeft - 1;
           if (newRounds <= 0) {
-            // ✅ 若從未分配過，扣罰金
-            if (!data.hasAllocated) {
-              const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-              const moneySnap = await get(moneyRef);
-              const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-              await update(moneyRef, { money: currentMoney - 1000 });
-            }
             await set(agentOptionRef, null);
           } else {
             await update(agentOptionRef, {
@@ -180,62 +172,6 @@ export async function renderRoleUI(playerName, roomCode) {
         roundsLeft: detail.duration,
         locked: true,
         invested: false
-      });
-    }
-
-    async function showRewardPanel(playerName, roomCode) {
-      const db = getDatabase();
-      const agentRef = ref(db, `rooms/${roomCode}/players/${playerName}`);
-      const agentSnap = await get(agentRef);
-      const investors = agentSnap.val()?.investors || {};
-      const rewardPanel = document.getElementById("rewardPanel");
-
-      if (Object.keys(investors).length === 0) {
-        rewardPanel.innerHTML = `<p>⚠️ 無人投資你，無法分配回饋</p>`;
-        return;
-      }
-
-      rewardPanel.innerHTML = `
-        <hr/>
-        <h4>分配回饋金額給投資者：</h4>
-        <label>選擇對象：</label>
-        <select id="allocateTarget">
-          ${Object.keys(investors).map(name => `<option value="${name}">${name}</option>`).join("")}
-        </select>
-        <label>分配金額：</label>
-        <input type="number" id="allocateAmount" placeholder="例如 10" min="1">
-        <button id="confirmAllocate">確認分配</button>
-        <p id="allocateResult" style="margin-top:5px;"></p>
-      `;
-
-      document.getElementById("confirmAllocate").addEventListener("click", async () => {
-        const target = document.getElementById("allocateTarget").value;
-        const amount = parseInt(document.getElementById("allocateAmount").value);
-        const result = document.getElementById("allocateResult");
-
-        if (!target || isNaN(amount) || amount <= 0) {
-          result.textContent = "❌ 請輸入正確金額與選擇對象";
-          return;
-        }
-
-        const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-        const targetRef = ref(db, `rooms/${roomCode}/players/${target}/money`);
-        const [mySnap, targetSnap] = await Promise.all([get(moneyRef), get(targetRef)]);
-        const myMoney = mySnap.exists() ? mySnap.val() : 0;
-        const targetMoney = targetSnap.exists() ? targetSnap.val() : 0;
-
-        if (amount > myMoney) {
-          result.textContent = "❌ 餘額不足，無法分配";
-          return;
-        }
-
-        await update(ref(db), {
-          [`rooms/${roomCode}/players/${playerName}/money`]: myMoney - amount,
-          [`rooms/${roomCode}/players/${target}/money`]: targetMoney + amount,
-          [`rooms/${roomCode}/players/${playerName}/agentOption/hasAllocated`]: true
-        });
-
-        result.textContent = `✅ 成功分配 $${amount} 給 ${target}`;
       });
     }
   }
