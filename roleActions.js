@@ -1,4 +1,3 @@
-//role.js 5/22可以用
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -26,7 +25,7 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 即時監聽代理人資料
+    // ✅ 代理人方案變化監聽
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
 
@@ -61,10 +60,16 @@ export async function renderRoleUI(playerName, roomCode) {
       `;
 
       if (!existing.invested) {
-        document.getElementById("investAgent").addEventListener("click", async () => {
+        // ✅ 清除舊事件綁定
+        const oldBtn = document.getElementById("investAgent");
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+        newBtn.addEventListener("click", async () => {
           const amount = parseInt(document.getElementById("investAmount").value);
           const result = document.getElementById("investResult");
 
+          if (!result) return;
           if (isNaN(amount) || amount <= 0) {
             result.style.color = "red";
             result.textContent = "請輸入有效金額！";
@@ -95,10 +100,10 @@ export async function renderRoleUI(playerName, roomCode) {
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
           }
 
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
-            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
-          });
+          const updates = {};
+          updates[`rooms/${roomCode}/players/${playerName}/money`] = currentMoney;
+          updates[`rooms/${roomCode}/players/${playerName}/agentOption/invested`] = true;
+          await update(ref(db), updates);
 
           document.getElementById("investAgent").disabled = true;
           document.getElementById("investAmount").disabled = true;
@@ -106,7 +111,7 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // ✅ 每回合減少回合數，並更新 invested 狀態
+    // ✅ 每日結束後自動減回合數
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     onValue(turnEndRef, async (snap) => {
       if (snap.val() === true) {
@@ -127,15 +132,16 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
+    // ✅ 產生當日兩個隨機選項
     async function generateOptions() {
       const optionA = {
-        chance: Math.floor(Math.random() * 51) + 50,
-        multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
-        duration: Math.floor(Math.random() * 4) + 1
+        chance: Math.floor(Math.random() * 51) + 50, // 50~100%
+        multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)), // 1.00~2.00 倍
+        duration: Math.floor(Math.random() * 4) + 1 // 1~4 回合
       };
       const optionB = {
-        chance: Math.floor(Math.random() * 31) + 20,
-        multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
+        chance: Math.floor(Math.random() * 31) + 20, // 20~50%
+        multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)), // 1.5~3.0 倍
         duration: Math.floor(Math.random() * 4) + 1
       };
 
@@ -144,7 +150,6 @@ export async function renderRoleUI(playerName, roomCode) {
         locked: false
       });
 
-      const section = document.getElementById("agentOptionsSection");
       section.style.display = "block";
       section.innerHTML = `
         <h3>本日代理選項：</h3>
@@ -164,12 +169,14 @@ export async function renderRoleUI(playerName, roomCode) {
       });
     }
 
+    // ✅ 鎖定選項並啟動任務
     async function lockOption(option, detail) {
       await set(agentOptionRef, {
         option,
         chance: detail.chance,
         multiplier: detail.multiplier,
         roundsLeft: detail.duration,
+        totalRounds: detail.duration,
         locked: true,
         invested: false
       });
