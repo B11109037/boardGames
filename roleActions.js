@@ -26,41 +26,23 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 即時監聽代理人資料
-    onValue(agentOptionRef, async (snap) => {
-      const existing = snap.val();
+    get(agentOptionRef).then(async (snap) => {
+      let existing = snap.val();
 
-      if (!existing || !existing.locked) {
-        await generateOptions();
-        return;
-      }
-
-      section.innerHTML = "";
-      section.style.display = "block";
-
-      if (existing.roundsLeft <= 0) {
+      if (existing && String(existing.locked) === "true") {
+        section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
-          <p>剩餘回合：0</p>
-          <p style="color:red;">本方案已結束，請等待新代理任務。</p>
+          <p>剩餘回合：${existing.roundsLeft}</p>
+          <div class="card" style="margin-top: 10px;">
+            <label for="investAmount">投入金額：</label>
+            <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
+            <button id="investAgent">確認投資</button>
+            <p id="investResult" style="color: green;"></p>
+          </div>
         `;
-        return;
-      }
 
-      section.innerHTML = `
-        <h3>你已選擇方案 ${existing.option}</h3>
-        <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
-        <p>剩餘回合：${existing.roundsLeft}</p>
-        <div class="card" style="margin-top: 10px;">
-          <label for="investAmount">投入金額：</label>
-          <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
-          <button id="investAgent">確認投資</button>
-          <p id="investResult" style="color: green;"></p>
-        </div>
-      `;
-
-      if (!existing.invested) {
         document.getElementById("investAgent").addEventListener("click", async () => {
           const amount = parseInt(document.getElementById("investAmount").value);
           const result = document.getElementById("investResult");
@@ -103,76 +85,73 @@ export async function renderRoleUI(playerName, roomCode) {
           document.getElementById("investAgent").disabled = true;
           document.getElementById("investAmount").disabled = true;
         });
+
+        return;
       }
-    });
 
-    // ✅ 每回合減少回合數，並更新 invested 狀態
-    const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
-    onValue(turnEndRef, async (snap) => {
-      if (snap.val() === true) {
-        const agentSnap = await get(agentOptionRef);
-        const data = agentSnap.val();
-        if (data && data.locked) {
-          const newRounds = data.roundsLeft - 1;
-          if (newRounds <= 0) {
-            await set(agentOptionRef, null);
-          } else {
-            await update(agentOptionRef, {
-              roundsLeft: newRounds,
-              invested: false
-            });
-          }
-        }
-        await set(turnEndRef, false);
+      // 尚未選擇方案，產生新選項
+      if (!existing || !existing.options) {
+        const optionA = {
+          chance: Math.floor(Math.random() * 51) + 50,
+          multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
+          duration: Math.floor(Math.random() * 4) + 1
+        };
+        const optionB = {
+          chance: Math.floor(Math.random() * 31) + 20,
+          multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
+          duration: Math.floor(Math.random() * 4) + 1
+        };
+
+        existing = {
+          options: { A: optionA, B: optionB },
+          locked: false
+        };
+        await set(agentOptionRef, existing);
       }
-    });
 
-    async function generateOptions() {
-      const optionA = {
-        chance: Math.floor(Math.random() * 51) + 50,
-        multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
-        duration: Math.floor(Math.random() * 4) + 1
-      };
-      const optionB = {
-        chance: Math.floor(Math.random() * 31) + 20,
-        multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
-        duration: Math.floor(Math.random() * 4) + 1
-      };
-
-      await set(agentOptionRef, {
-        options: { A: optionA, B: optionB },
-        locked: false
-      });
-
-      const section = document.getElementById("agentOptionsSection");
+      // 顯示選擇畫面
       section.style.display = "block";
+      const optA = existing.options.A;
+      const optB = existing.options.B;
       section.innerHTML = `
         <h3>本日代理選項：</h3>
-        <p>A：成功機率 ${optionA.chance}%、回報 ${optionA.multiplier} 倍、持續 ${optionA.duration} 回合</p>
-        <p>B：成功機率 ${optionB.chance}%、回報 ${optionB.multiplier} 倍、持續 ${optionB.duration} 回合</p>
-        <button id="chooseA">選擇 A</button>
-        <button id="chooseB">選擇 B</button>
-        <p id="agentStatus" style="color: green;"></p>
+        <div id="agentOptions">
+          <p id="optionA">A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
+          <p id="optionB">B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
+          <button id="chooseA">選擇 A</button>
+          <button id="chooseB">選擇 B</button>
+          <p id="agentStatus" style="color: green;"></p>
+        </div>
       `;
 
+      // 選擇方案並鎖定
       document.getElementById("chooseA").addEventListener("click", async () => {
-        await lockOption("A", optionA);
+        await lockAgentOption("A", existing.options.A);
+        renderRoleUI(playerName, roomCode);
       });
 
       document.getElementById("chooseB").addEventListener("click", async () => {
-        await lockOption("B", optionB);
+        await lockAgentOption("B", existing.options.B);
+        renderRoleUI(playerName, roomCode);
       });
-    }
 
-    async function lockOption(option, detail) {
-      await set(agentOptionRef, {
-        option,
-        chance: detail.chance,
-        multiplier: detail.multiplier,
-        roundsLeft: detail.duration,
-        locked: true,
-        invested: false
-      });
-    }
+      async function lockAgentOption(option, detail) {
+        const status = document.getElementById("agentStatus");
+
+        await update(ref(db), {
+          [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
+            option,
+            chance: detail.chance,
+            multiplier: detail.multiplier,
+            roundsLeft: detail.duration,
+            locked: true,
+            invested: false
+          }
+        });
+
+        status.style.color = "green";
+        status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
+      }
+    });
   }
 }
