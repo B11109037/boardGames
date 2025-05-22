@@ -56,6 +56,23 @@ export async function renderRoleUI(playerName, roomCode) {
         const agentRoundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
         onValue(agentRoundsRef, (snap) => {
           const val = snap.val();
+
+          // 自動重置已投資欄位與按鈕啟用
+          if (val > 0) {
+            const investedRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/invested`);
+            onValue(investedRef, (snap) => {
+              const invested = snap.val();
+              const btn = document.getElementById("investAgent");
+              const input = document.getElementById("investAmount");
+              if (btn && input && invested === false) {
+                btn.disabled = false;
+                input.disabled = false;
+                document.getElementById("investResult").textContent = "";
+              }
+            });
+          }
+
+          const val = snap.val();
           const el = document.getElementById("agentRoundsLeft");
           if (el) el.textContent = `剩餘回合：${val ?? 0}`;
         });
