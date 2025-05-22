@@ -162,3 +162,68 @@
       });
     }
   </script>
+    <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 1rem;
+      max-width: 500px;
+      margin: auto;
+    }
+    .card {
+      background: #fff;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .investment-card {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #investmentList p {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>玩家：<span id="playerName">載入中...</span></h2>
+    <p>💰 餘額：<strong id="money">$0</strong></p>
+  </div>
+
+  <div class="card" id="rolePanel">
+    <p>正在載入角色資訊...</p>
+  </div>
+
+  <div class="card" id="investPanel">
+    <h3>我要投資：</h3>
+    <label for="target">選擇對象：</label>
+    <select id="target"></select>
+    <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
+    <label for="amount">投資金額：</label>
+    <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
+    <button onclick="invest()">確認投資</button>
+    <p id="investStatus"></p>
+  </div>
+
+  <div class="card" id="investmentHistory">
+    <h3>我的投資紀錄：</h3>
+    <div id="investmentList">
+      <p>尚未有投資紀錄</p>
+    </div>
+  </div>
+
+  <div class="card" id="endTurnPanel">
+    <h3>結束本回合操作</h3>
+    <button id="endTurnBtn">✅ 我已完成本回合動作</button>
+    <p id="endTurnStatus" style="color: green;"></p>
+  </div>
+</body>
+</html>
+
