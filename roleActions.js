@@ -1,5 +1,3 @@
-import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-
 export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
   const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
@@ -25,14 +23,17 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 即時監聽代理人資料
-    onValue(agentOptionRef, async (snap) => {
-      const existing = snap.val();
+    // ✅ 第一次檢查是否已有選項，若無就生成
+    const agentSnap = await get(agentOptionRef);
+    const data = agentSnap.val();
+    if (!data || !data.locked) {
+      await generateOptions();
+    }
 
-      if (!existing || !existing.locked) {
-        await generateOptions();
-        return;
-      }
+    // ✅ 再來才做即時監聽，避免觸發 loop
+    onValue(agentOptionRef, (snap) => {
+      const existing = snap.val();
+      if (!existing || !existing.locked) return;
 
       section.innerHTML = "";
       section.style.display = "block";
@@ -94,9 +95,10 @@ export async function renderRoleUI(playerName, roomCode) {
             result.textContent = `❌ 投資失敗，損失 $${amount}`;
           }
 
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
-            [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
+          const playerRef = ref(db, `rooms/${roomCode}/players/${playerName}`);
+          await update(playerRef, {
+            money: currentMoney,
+            "agentOption/invested": true
           });
 
           document.getElementById("investAgent").disabled = true;
@@ -105,7 +107,7 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // ✅ 每回合減少回合數，並更新 invested 狀態
+    // ✅ 每回合結束時更新 roundsLeft 與 invested 狀態
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     onValue(turnEndRef, async (snap) => {
       if (snap.val() === true) {
