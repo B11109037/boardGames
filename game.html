@@ -42,7 +42,7 @@
       loadMyInvestments();
 
       const playersRef = ref(db, `rooms/${room}/players`);
-      onValue(playersRef, (snap) => {
+      onValue(playersRef, async (snap) => {
         const players = snap.val() || {};
 
         // 更新投資對象清單
@@ -68,7 +68,7 @@
           targetStatus.textContent = "";
         }
 
-        // 檢查是否所有人都按下結束
+        // 檢查是否所有人都完成回合
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
