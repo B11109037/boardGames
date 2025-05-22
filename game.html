@@ -41,10 +41,11 @@
       renderRoleUI(player, room);
       loadMyInvestments();
 
-      // 監聽投資對象名單
       const playersRef = ref(db, `rooms/${room}/players`);
       onValue(playersRef, (snap) => {
         const players = snap.val() || {};
+
+        // 更新投資對象清單
         const targetSelect = document.getElementById("target");
         const targetStatus = document.getElementById("targetStatus");
         targetSelect.innerHTML = "";
@@ -66,23 +67,9 @@
         } else {
           targetStatus.textContent = "";
         }
-      });
 
-      // 🟢 結束動作按鈕
-      document.getElementById("endTurnBtn").addEventListener("click", async () => {
-        await set(ref(db, `rooms/${room}/players/${player}/done`), true);
-        document.getElementById("endTurnStatus").textContent = "✅ 已結束本回合";
-        document.getElementById("endTurnBtn").disabled = true;
-      });
-
-      // 🔁 偵測所有玩家是否都完成，發錢 + 重置
-      const playersRef = ref(db, `rooms/${room}/players`);
-      onValue(playersRef, async (snap) => {
-        const players = snap.val();
-        if (!players) return;
-
+        // 檢查是否所有人都按下結束
         const allDone = Object.values(players).every(p => p.done === true);
-
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
             const newMoney = (data.money || 0) + 100;
@@ -94,11 +81,18 @@
           alert("🎉 所有人已結束本回合，已自動發放 $100！");
         }
       });
+
+      document.getElementById("endTurnBtn").addEventListener("click", async () => {
+        await set(ref(db, `rooms/${room}/players/${player}/done`), true);
+        document.getElementById("endTurnStatus").textContent = "✅ 已結束本回合";
+        document.getElementById("endTurnBtn").disabled = true;
+      });
     });
 
     window.invest = async function () {
       const target = document.getElementById("target").value;
-      const amount = parseInt(document.getElementById("amount").value);
+      const amountInput = document.getElementById("amount");
+      const amount = parseInt(amountInput.value);
       const investStatus = document.getElementById("investStatus");
 
       if (!target || isNaN(amount) || amount <= 0) {
@@ -122,21 +116,22 @@
       const targetRef = ref(db, `rooms/${room}/players/${target}`);
       const targetSnap = await get(targetRef);
       const targetData = targetSnap.val() || {};
+      const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
 
       await update(targetRef, {
         money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: (targetData.investors?.[player] || 0) + amount
+        [`investors/${player}`]: existingInvestment + amount
       });
 
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
       const myInvestmentSnap = await get(myInvestmentRef);
       const myInvestments = myInvestmentSnap.val() || {};
 
-      await update(ref(db, `rooms/${room}/players/${player}/myInvestments`), {
+      await update(myInvestmentRef, {
         [target]: (myInvestments[target] || 0) + amount
       });
 
-      loadMyInvestments();
+      amountInput.value = "";
       investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
     }
 
@@ -162,7 +157,7 @@
       });
     }
   </script>
-    <style>
+  <style>
     body {
       font-family: sans-serif;
       background: #f0f0f0;
@@ -190,7 +185,6 @@
     }
   </style>
 </head>
-
 <body>
   <div class="card">
     <h2>玩家：<span id="playerName">載入中...</span></h2>
@@ -226,4 +220,3 @@
   </div>
 </body>
 </html>
-
