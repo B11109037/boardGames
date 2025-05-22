@@ -1,3 +1,4 @@
+//game.html 結束動作可以減去回合數
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -71,30 +72,15 @@
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
             const newMoney = (data.money || 0) + 100;
-            const rounds = (data.rounds ?? 1) - 1;
-            const agent = data.agentOption;
-
-            const updates = {
+            await update(ref(db), {
               [`rooms/${room}/players/${name}/money`]: newMoney,
               [`rooms/${room}/players/${name}/done`]: false,
-              [`rooms/${room}/players/${name}/rounds`]: rounds < 0 ? 0 : rounds,
-            };
-
-            if (agent && agent.locked === true) {
-              const remaining = (agent.roundsLeft ?? 1) - 1;
-              if (remaining <= 0) {
-                updates[`rooms/${room}/players/${name}/agentOption`] = null;
-              } else {
-                updates[`rooms/${room}/players/${name}/agentOption/roundsLeft`] = remaining;
-                updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
-              }
-            }
-
-            await update(ref(db), updates);
+              [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
+              [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: (data.agentOption?.roundsLeft ?? 1) - 1
+            });
           }
-
           const endRoundNotice = document.getElementById("endRoundNotice");
-          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並重置狀態！";
+          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100！";
           endRoundNotice.style.display = "block";
         }
       });
