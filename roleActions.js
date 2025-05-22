@@ -1,4 +1,18 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getDatabase, ref, get, onValue, update, set, off } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
+  authDomain: "broadgame-9bc04.firebaseapp.com",
+  databaseURL: "https://broadgame-9bc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "broadgame-9bc04",
+  storageBucket: "broadgame-9bc04.appspot.com",
+  messagingSenderId: "220150025271",
+  appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2",
+  measurementId: "G-6T9GW9LVD7"
+};
+
+const app = initializeApp(firebaseConfig);
 
 export async function renderRoleUI(playerName, roomCode) {
   const db = getDatabase();
@@ -25,14 +39,12 @@ export async function renderRoleUI(playerName, roomCode) {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
-    // ✅ 僅初始化時檢查一次並產生選項
     const agentSnap = await get(agentOptionRef);
     const data = agentSnap.val();
     if (!data || !data.locked) {
       await generateOptions();
     }
 
-    // ✅ 移除舊的監聽再綁定
     off(agentOptionRef);
     onValue(agentOptionRef, async (snap) => {
       const existing = snap.val();
@@ -113,7 +125,6 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
 
-    // ✅ 每回合結束更新狀態（防止重複監聽）
     const turnEndRef = ref(db, `rooms/${roomCode}/turnEnded`);
     off(turnEndRef);
     onValue(turnEndRef, async (snap) => {
