@@ -45,7 +45,6 @@
       onValue(playersRef, async (snap) => {
         const players = snap.val() || {};
 
-        // 更新投資對象清單
         const targetSelect = document.getElementById("target");
         const targetStatus = document.getElementById("targetStatus");
         targetSelect.innerHTML = "";
@@ -68,7 +67,6 @@
           targetStatus.textContent = "";
         }
 
-        // 檢查是否所有人都完成回合
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
@@ -79,15 +77,28 @@
             });
           }
           const endRoundNotice = document.getElementById("endRoundNotice");
-endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100！";
-endRoundNotice.style.display = "block";
+          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100！";
+          endRoundNotice.style.display = "block";
+        }
+      });
+
+      const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
+      onValue(doneRef, snap => {
+        const done = snap.val();
+        const endTurnBtn = document.getElementById("endTurnBtn");
+        const endTurnStatus = document.getElementById("endTurnStatus");
+
+        if (done === true) {
+          endTurnBtn.disabled = true;
+          endTurnStatus.textContent = "✅ 已結束本回合";
+        } else {
+          endTurnBtn.disabled = false;
+          endTurnStatus.textContent = "";
         }
       });
 
       document.getElementById("endTurnBtn").addEventListener("click", async () => {
         await set(ref(db, `rooms/${room}/players/${player}/done`), true);
-        document.getElementById("endTurnStatus").textContent = "✅ 已結束本回合";
-        document.getElementById("endTurnBtn").disabled = true;
       });
     });
 
@@ -98,7 +109,7 @@ endRoundNotice.style.display = "block";
       const investStatus = document.getElementById("investStatus");
 
       if (!target || isNaN(amount) || amount <= 0) {
-        investStatus.textContent = "請輸入正確金額與選擇投資對象";
+        investStatus.innerHTML = "❌ <span style='color:red;'>請輸入正確金額與選擇投資對象</span>";
         return;
       }
 
@@ -107,7 +118,7 @@ endRoundNotice.style.display = "block";
       const myMoney = mySnap.val() || 0;
 
       if (amount > myMoney) {
-        investStatus.textContent = "💸 餘額不足！";
+        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，損失 $" + amount + "</span>";
         return;
       }
 
@@ -134,7 +145,7 @@ endRoundNotice.style.display = "block";
       });
 
       amountInput.value = "";
-      investStatus.textContent = `✅ 成功投資 ${target} $${amount}`;
+      investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
     }
 
     function loadMyInvestments() {
@@ -206,6 +217,11 @@ endRoundNotice.style.display = "block";
     <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
     <button onclick="invest()">確認投資</button>
     <p id="investStatus"></p>
+
+    <div style="margin-top: 1rem;">
+      <button id="endTurnBtn">✅ 我已完成本回合動作</button>
+      <p id="endTurnStatus" style="color: green;"></p>
+    </div>
   </div>
 
   <div class="card" id="investmentHistory">
@@ -215,12 +231,6 @@ endRoundNotice.style.display = "block";
     </div>
   </div>
 
-  <div class="card" id="endTurnPanel">
-    <h3>結束本回合操作</h3>
-    <button id="endTurnBtn">✅ 我已完成本回合動作</button>
-    <p id="endTurnStatus" style="color: green;"></p>
-  </div>
-<div id="endRoundNotice" style="display:none; background:#d0f0d0; border:1px solid #5cb85c; padding:1rem; border-radius:10px; margin:1rem auto; max-width:500px; text-align:center; font-weight:bold; color:#2c662d;"></div>
-
+  <div id="endRoundNotice" style="display:none; background:#d0f0d0; border:1px solid #5cb85c; padding:1rem; border-radius:10px; margin:1rem auto; max-width:500px; text-align:center; font-weight:bold; color:#2c662d;"></div>
 </body>
 </html>
