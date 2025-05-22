@@ -78,7 +78,9 @@
               [`rooms/${room}/players/${name}/done`]: false
             });
           }
-          alert("🎉 所有人已結束本回合，已自動發放 $100！");
+          const endRoundNotice = document.getElementById("endRoundNotice");
+endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100！";
+endRoundNotice.style.display = "block";
         }
       });
 
@@ -218,5 +220,7 @@
     <button id="endTurnBtn">✅ 我已完成本回合動作</button>
     <p id="endTurnStatus" style="color: green;"></p>
   </div>
+<div id="endRoundNotice" style="display:none; background:#d0f0d0; border:1px solid #5cb85c; padding:1rem; border-radius:10px; margin:1rem auto; max-width:500px; text-align:center; font-weight:bold; color:#2c662d;"></div>
+
 </body>
 </html>
