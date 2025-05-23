@@ -58,11 +58,8 @@ export async function renderRoleUI(playerName, roomCode) {
 
     const select = document.getElementById("allocateTarget");
 
-    // 🧠 詐騙者前一回合是否有被投資狀態
-    const statusRef = ref(db, `rooms/${roomCode}/players/${playerName}/scamStatus`);
-    let previousHadInvestor = null;
-
     onValue(investorsRef, async (snap) => {
+      const previousInvestors = latestInvestors;
       latestInvestors = snap.val() || {};
       select.innerHTML = "";
       for (let name in latestInvestors) {
@@ -74,26 +71,22 @@ export async function renderRoleUI(playerName, roomCode) {
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
       updateInvestorDisplay();
 
-      // ✅ 修正版詐騙者邏輯：本回合有人投資 → 儲存標記；下回合根據上次標記加減錢
+      // ✅ 詐騙者只在本回合第一次被投資時立即加200元
       if (role === "詐騙者") {
         const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-        const moneySnap = await get(moneyRef);
-        let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-
+        const statusRef = ref(db, `rooms/${roomCode}/players/${playerName}/hasBeenInvestedThisTurn`);
         const statusSnap = await get(statusRef);
-        const lastStatus = statusSnap.exists() ? statusSnap.val() : null;
+        const alreadyFlagged = statusSnap.exists() ? statusSnap.val() : false;
 
-        if (lastStatus === true) {
+        if (Object.keys(latestInvestors).length > 0 && !alreadyFlagged) {
+          const moneySnap = await get(moneyRef);
+          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
           currentMoney += 200;
-        } else if (lastStatus === false) {
-          currentMoney -= 200;
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+            [`rooms/${roomCode}/players/${playerName}/hasBeenInvestedThisTurn`]: true
+          });
         }
-
-        // 更新金額與這回合狀態
-        await update(ref(db), {
-          [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
-          [`rooms/${roomCode}/players/${playerName}/scamStatus`]: Object.keys(latestInvestors).length > 0
-        });
       }
     });
 
