@@ -17,7 +17,7 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">...</div>
+    <div id="roleExtraInfo">等待投資資訊...</div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
@@ -58,7 +58,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
     const select = document.getElementById("allocateTarget");
 
-    onValue(investorsRef, (snap) => {
+    onValue(investorsRef, async (snap) => {
       latestInvestors = snap.val() || {};
       select.innerHTML = "";
       for (let name in latestInvestors) {
@@ -69,6 +69,21 @@ export async function renderRoleUI(playerName, roomCode) {
       }
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
       updateInvestorDisplay();
+
+      // ✅ 詐騙者投資獎勵邏輯
+      if (role === "詐騙者") {
+        const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+        const moneySnap = await get(moneyRef);
+        let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+        if (Object.keys(latestInvestors).length > 0) {
+          currentMoney += 200;
+        } else {
+          currentMoney -= 200;
+        }
+        await update(ref(db), {
+          [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney
+        });
+      }
     });
 
     onValue(givenBackRef, (snap) => {
@@ -148,7 +163,6 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
   }
-
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
