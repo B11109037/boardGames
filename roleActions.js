@@ -17,7 +17,7 @@ export async function renderRoleUI(playerName, roomCode) {
   rolePanel.innerHTML = `
     <h3>角色資訊</h3>
     <div id="role">${role}</div>
-    <div id="roleExtraInfo">等待投資資訊...</div>
+    <div id="roleExtraInfo">...</div>
     <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
@@ -58,8 +58,7 @@ export async function renderRoleUI(playerName, roomCode) {
 
     const select = document.getElementById("allocateTarget");
 
-    onValue(investorsRef, async (snap) => {
-      const previousInvestors = latestInvestors;
+    onValue(investorsRef, (snap) => {
       latestInvestors = snap.val() || {};
       select.innerHTML = "";
       for (let name in latestInvestors) {
@@ -70,24 +69,6 @@ export async function renderRoleUI(playerName, roomCode) {
       }
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
       updateInvestorDisplay();
-
-      // ✅ 詐騙者只在本回合第一次被投資時立即加200元
-      if (role === "詐騙者") {
-        const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-        const statusRef = ref(db, `rooms/${roomCode}/players/${playerName}/hasBeenInvestedThisTurn`);
-        const statusSnap = await get(statusRef);
-        const alreadyFlagged = statusSnap.exists() ? statusSnap.val() : false;
-
-        if (Object.keys(latestInvestors).length > 0 && !alreadyFlagged) {
-          const moneySnap = await get(moneyRef);
-          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-          currentMoney += 200;
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
-            [`rooms/${roomCode}/players/${playerName}/hasBeenInvestedThisTurn`]: true
-          });
-        }
-      }
     });
 
     onValue(givenBackRef, (snap) => {
@@ -116,7 +97,7 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
+     const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
       const targetMoneySnap = await get(targetMoneyRef);
       const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
 
