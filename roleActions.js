@@ -375,4 +375,4 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
   }
-}
+
