@@ -44,7 +44,6 @@ export async function renderRoleUI(playerName, roomCode) {
   if (role === "詐騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
-    const select = document.getElementById("allocateTarget");
     const allocateSection = document.getElementById("allocateSection");
 
     allocateSection.innerHTML = `
@@ -57,15 +56,16 @@ export async function renderRoleUI(playerName, roomCode) {
       <p id="allocateStatus" style="color: green;"></p>
     `;
 
+    const select = document.getElementById("allocateTarget");
+
     onValue(investorsRef, (snap) => {
       latestInvestors = snap.val() || {};
-      const targetSelect = document.getElementById("allocateTarget");
-      targetSelect.innerHTML = "";
+      select.innerHTML = "";
       for (let name in latestInvestors) {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
-        targetSelect.appendChild(option);
+        select.appendChild(option);
       }
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
       updateInvestorDisplay();
@@ -151,37 +151,11 @@ export async function renderRoleUI(playerName, roomCode) {
 
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
-    //5/23 投資代理人結束動作可以再次投資
-import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-
-export async function renderRoleUI(playerName, roomCode) {
-  const db = getDatabase();
-  const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
-  const roleSnap = await get(roleRef);
-  const rolePanel = document.getElementById("rolePanel");
-
-  if (!roleSnap.exists()) {
-    rolePanel.innerHTML = `<p>❌ 無法讀取角色資訊</p>`;
-    return;
-  }
-
-  const role = roleSnap.val();
-
-  rolePanel.innerHTML = `
-    <h3>角色資訊</h3>
-    <div id="role">${role}</div>
-    <div id="roleExtraInfo">...</div>
-    <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
-    <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
-  `;
-
-  if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
 
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
-
       if (existing?.locked === true) {
         section.style.display = "block";
         section.innerHTML = `
@@ -202,7 +176,6 @@ export async function renderRoleUI(playerName, roomCode) {
           if (el) el.textContent = `剩餘回合：${snap.val() ?? 0}`;
         });
 
-        // ✅ 關鍵修正：即時監聽 invested 狀態來控制按鈕
         onValue(agentOptionRef, (snap) => {
           const current = snap.val() || {};
           const invested = current.invested === true;
@@ -261,7 +234,6 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
-      // 尚未選擇方案 → 建立新選項
       if (!existing || !existing.options || existing.locked === false) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
@@ -281,7 +253,6 @@ export async function renderRoleUI(playerName, roomCode) {
         await set(agentOptionRef, existing);
       }
 
-      // 顯示選擇選項
       section.style.display = "block";
       const optA = existing.options.A;
       const optB = existing.options.B;
@@ -308,7 +279,6 @@ export async function renderRoleUI(playerName, roomCode) {
 
       async function lockAgentOption(option, detail) {
         const status = document.getElementById("agentStatus");
-
         await update(ref(db), {
           [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
             option,
@@ -319,12 +289,9 @@ export async function renderRoleUI(playerName, roomCode) {
             invested: false
           }
         });
-
         status.style.color = "green";
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
       }
     });
-  }
-}
   }
 }
