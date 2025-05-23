@@ -122,7 +122,33 @@ export async function renderRoleUI(playerName, roomCode) {
       status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
     });
   }
-    // ============ 詐騙者加錢機制 ============
+
+  // ============ 普通人查看收到的金額 ============
+  if (role !== "詐騙者" && role !== "投資代理人") {
+    const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
+    onValue(receivedRef, (snap) => {
+      const received = snap.val() || {};
+      let receivedPanel = document.getElementById("receivedPanel");
+      if (!receivedPanel) {
+        receivedPanel = document.createElement("div");
+        receivedPanel.id = "receivedPanel";
+        receivedPanel.style.marginTop = "20px";
+        rolePanel.appendChild(receivedPanel);
+      }
+
+      receivedPanel.innerHTML = "";
+      if (Object.keys(received).length === 0) {
+        receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
+      } else {
+        let html = "<h4>你收到的金額：</h4>";
+        for (let name in received) {
+          html += `<p>${name} 分配給你 $${received[name]}</p>`;
+        }
+        receivedPanel.innerHTML = html;
+      }
+    });
+  }
+   // ============ 詐騙者加錢機制 ============
     if (role === "詐騙者") {
       const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
       const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
@@ -170,69 +196,6 @@ export async function renderRoleUI(playerName, roomCode) {
         }
       });
     }
-   // ============ 投資代理人分配金額時記錄變數為 true ============
-  if (role === "投資代理人") {
-    const allocateBtn = document.getElementById("allocateConfirmBtn");
-    if (allocateBtn) {
-      allocateBtn.addEventListener("click", async () => {
-        const target = document.getElementById("allocateTarget").value;
-        const amount = parseInt(document.getElementById("allocateAmount").value);
-        if (target && !isNaN(amount) && amount > 0) {
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/agentDistributed`]: true
-          });
-        }
-      });
-    }
-
-    // 回合數為 0 時若 agentDistributed 為 false，扣除 1000 元
-    const roundsLeftRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
-    onValue(roundsLeftRef, async (snap) => {
-      const roundsLeft = snap.exists() ? snap.val() : 0;
-      if (roundsLeft === 0) {
-        const distributedRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentDistributed`);
-        const distributedSnap = await get(distributedRef);
-        const wasDistributed = distributedSnap.exists() ? distributedSnap.val() : false;
-
-        if (!wasDistributed) {
-          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-          const moneySnap = await get(moneyRef);
-          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/money`]: Math.max(0, currentMoney - 1000)
-          });
-        }
-      }
-    });
-  }
-
-  // ============ 普通人查看收到的金額 ============
-  if (role !== "詐騙者" && role !== "投資代理人") {
-    const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
-    onValue(receivedRef, (snap) => {
-      const received = snap.val() || {};
-      let receivedPanel = document.getElementById("receivedPanel");
-      if (!receivedPanel) {
-        receivedPanel = document.createElement("div");
-        receivedPanel.id = "receivedPanel";
-        receivedPanel.style.marginTop = "20px";
-        rolePanel.appendChild(receivedPanel);
-      }
-
-      receivedPanel.innerHTML = "";
-      if (Object.keys(received).length === 0) {
-        receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
-      } else {
-        let html = "<h4>你收到的金額：</h4>";
-        for (let name in received) {
-          html += `<p>${name} 分配給你 $${received[name]}</p>`;
-        }
-        receivedPanel.innerHTML = html;
-      }
-    });
-  }
-
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
