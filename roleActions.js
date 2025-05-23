@@ -131,7 +131,7 @@ export async function renderRoleUI(playerName, roomCode) {
       onValue(gotInvestmentRef, (snap) => {
         const value = snap.exists() ? snap.val() : false;
         if (!value && notice) {
-          notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
+          notice.textContent = "⚠️ 今日尚未有人投資你，將會扣款200元";
           notice.style.color = "red";
           notice.style.display = "block";
         }
