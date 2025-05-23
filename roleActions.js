@@ -123,57 +123,6 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
     // ============詐騙者功能 ============
-    if (role === "詐騙者") {
-      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-      const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
-      const notice = document.getElementById("scammerNotice");
-    
-      // 🔄 動態監聽變數變成 false 時也要提醒
-      onValue(gotInvestmentRef, (snap) => {
-        const value = snap.exists() ? snap.val() : false;
-        if (!value && notice) {
-          notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
-          notice.style.color = "orange";
-          notice.style.display = "block";
-        }
-      });
-    
-      // ✅ 檢查首次進來是不是 false（用 get）
-      const gotInvestmentSnap = await get(gotInvestmentRef);
-      const alreadyGot = gotInvestmentSnap.exists() ? gotInvestmentSnap.val() : false;
-      if (!alreadyGot && notice) {
-        notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
-        notice.style.color = "orange";
-        notice.style.display = "block";
-      }
-    
-      // ✅ 有人投資 → 加錢邏輯
-      onValue(investorsRef, async (snap) => {
-        const investors = snap.val() || {};
-        if (Object.keys(investors).length > 0) {
-          const alreadySetSnap = await get(gotInvestmentRef);
-          const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
-    
-          if (!alreadySet) {
-            const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-            const moneySnap = await get(moneyRef);
-            const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-    
-            await update(ref(db), {
-              [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
-              [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
-            });
-    
-            if (notice) {
-              notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
-              notice.style.color = "green";
-              notice.style.display = "block";
-            }
-          }
-        }
-      });
-    }
-
   // ============ 普通人查看收到的金額 ============
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
