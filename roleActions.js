@@ -42,11 +42,11 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
           <div class="card" style="margin-top: 10px;">
             <div style="margin-bottom: 10px;">
-              <label for="allocateTarget">分配對象：</label><br>
+              <label for="allocateTarget">分配對象：</label>
               <select id="allocateTarget"><option disabled selected>載入中...</option></select>
             </div>
             <div style="margin-bottom: 10px;">
-              <label for="allocateAmount">分配金額：</label><br>
+              <label for="allocateAmount">分配金額：</label>
               <input type="number" id="allocateAmount" placeholder="輸入金額" min="1">
             </div>
             <button id="allocateConfirm">確認分配</button>
