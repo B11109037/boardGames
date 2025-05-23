@@ -42,7 +42,7 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
           <div class="card" style="margin-top: 10px;">
             <label for="allocateTarget">分配對象：</label>
-            <input type="text" id="allocateTarget" placeholder="輸入玩家名稱">
+            <select id="allocateTarget"><option disabled selected>載入中...</option></select>
             <label for="allocateAmount">分配金額：</label>
             <input type="number" id="allocateAmount" placeholder="輸入金額" min="1">
             <button id="allocateConfirm">確認分配</button>
@@ -50,6 +50,7 @@ export async function renderRoleUI(playerName, roomCode) {
           </div>
         `;
 
+        // 處理投資按鈕
         document.getElementById("investAgent").addEventListener("click", async () => {
           const amount = parseInt(document.getElementById("investAmount").value);
           const result = document.getElementById("investResult");
@@ -93,8 +94,33 @@ export async function renderRoleUI(playerName, roomCode) {
           document.getElementById("investAmount").disabled = true;
         });
 
+        // 載入投資你的人（investors）為分配對象選單
+        const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+        get(investorsRef).then(snap => {
+          const select = document.getElementById("allocateTarget");
+          select.innerHTML = "";
+          const investors = snap.val() || {};
+
+          const keys = Object.keys(investors);
+          if (keys.length === 0) {
+            const option = document.createElement("option");
+            option.disabled = true;
+            option.selected = true;
+            option.textContent = "⚠️ 無投資者";
+            select.appendChild(option);
+          } else {
+            for (let name of keys) {
+              const option = document.createElement("option");
+              option.value = name;
+              option.textContent = `${name}（$${investors[name]}）`;
+              select.appendChild(option);
+            }
+          }
+        });
+
+        // 處理分配按鈕
         document.getElementById("allocateConfirm").addEventListener("click", async () => {
-          const targetName = document.getElementById("allocateTarget").value.trim();
+          const targetName = document.getElementById("allocateTarget").value;
           const amount = parseInt(document.getElementById("allocateAmount").value);
           const result = document.getElementById("allocateResult");
 
@@ -114,6 +140,7 @@ export async function renderRoleUI(playerName, roomCode) {
         return;
       }
 
+      // 尚未選擇方案
       if (!existing || !existing.options) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
