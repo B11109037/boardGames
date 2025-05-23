@@ -22,6 +22,31 @@ export async function renderRoleUI(playerName, roomCode) {
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
 
+  // ✅ 詐騙者被投資立即加 200 元並記錄
+  if (role === "詐騙者") {
+    const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+    onValue(investorsRef, async (snap) => {
+      const investors = snap.val() || {};
+      if (Object.keys(investors).length > 0) {
+        const wasRef = ref(db, `rooms/${roomCode}/players/${playerName}/wasScammerInvested`);
+        const wasSnap = await get(wasRef);
+        if (!wasSnap.exists() || wasSnap.val() === false) {
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          const current = moneySnap.exists() ? moneySnap.val() : 0;
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/wasScammerInvested`]: true,
+            [`rooms/${roomCode}/players/${playerName}/money`]: current + 200
+          });
+          const extraInfo = document.getElementById("roleExtraInfo");
+          if (extraInfo) {
+            extraInfo.innerHTML += `<p style="color:green;">✅ 本回合已被投資，已獲得 $200 獎勵</p>`;
+          }
+        }
+      }
+    });
+  }
+
   // ============ 接收投資並分配金額邏輯 ============
   let latestInvestors = {};
   let latestGivenBack = {};
