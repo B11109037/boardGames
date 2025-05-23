@@ -98,41 +98,57 @@ export async function renderRoleUI(playerName, roomCode) {
         });
 
         const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-        get(investorsRef).then(snap => {
-          const select = document.getElementById("allocateTarget");
-          select.innerHTML = "";
-          const investors = snap.val() || {};
-
-          const keys = Object.keys(investors);
-          if (keys.length === 0) {
-            const option = document.createElement("option");
-            option.disabled = true;
-            option.selected = true;
-            option.textContent = "⚠️ 無投資者";
-            select.appendChild(option);
-          } else {
-            for (let name of keys) {
-              const option = document.createElement("option");
-              option.value = name;
-              option.textContent = `${name}（$${investors[name]}）`;
-              select.appendChild(option);
-            }
-          }
-        });
+        onValue(investorsRef, snap => {
+  const select = document.getElementById("allocateTarget");
+  select.innerHTML = "";
+  const investors = snap.val() || {};
+  const keys = Object.keys(investors);
+  if (keys.length === 0) {
+    const option = document.createElement("option");
+    option.disabled = true;
+    option.selected = true;
+    option.textContent = "⚠️ 無投資者";
+    select.appendChild(option);
+  } else {
+    for (let name of keys) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = `${name}（$${investors[name]}）`;
+      select.appendChild(option);
+    }
+  }
+});
 
         document.getElementById("allocateConfirm").addEventListener("click", async () => {
-          const targetName = document.getElementById("allocateTarget").value;
-          const amount = parseInt(document.getElementById("allocateAmount").value);
-          const result = document.getElementById("allocateResult");
+  const targetName = document.getElementById("allocateTarget").value;
+  const amount = parseInt(document.getElementById("allocateAmount").value);
+  const result = document.getElementById("allocateResult");
 
-          if (!targetName || isNaN(amount) || amount <= 0) {
-            result.style.color = "red";
-            result.textContent = "請輸入正確的對象與金額";
-            return;
-          }
+  if (!targetName || isNaN(amount) || amount <= 0) {
+    result.style.color = "red";
+    result.textContent = "請輸入正確的對象與金額";
+    return;
+  }
 
-          const targetRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
-          await update(targetRef, { amount });
+  const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+  const moneySnap = await get(moneyRef);
+  let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+  if (currentMoney < amount) {
+    result.style.color = "red";
+    result.textContent = "💸 餘額不足，無法分配";
+    return;
+  }
+
+  // 扣除自己的金額與更新接收者
+  await update(ref(db), {
+    [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
+    [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: { amount }
+  });
+
+  result.style.color = "green";
+  result.textContent = `✅ 已分配 $${amount} 給 ${targetName}`;
+});
 
           result.style.color = "green";
           result.textContent = `✅ 已分配 $${amount} 給 ${targetName}`;
