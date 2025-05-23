@@ -148,8 +148,6 @@ export async function renderRoleUI(playerName, roomCode) {
 
   result.style.color = "green";
   result.textContent = `✅ 已分配 $${amount} 給 ${targetName}`;
-});
-
           });
 
         return;
