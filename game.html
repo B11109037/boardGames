@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI, generateAgentOptions } from "./roleActions.js";
+    import { renderRoleUI } from "./roleActions.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -75,13 +75,13 @@
             const roundsLeft = (data.agentOption?.roundsLeft ?? 1) - 1;
           
             const updates = {
-              [`rooms/${room}/players/${name}/money`]: newMoney,
-              [`rooms/${room}/players/${name}/done`]: false,
-              [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
-              [`rooms/${room}/players/${name}/agentOption/invested`]: false,
-              [`rooms/${room}/players/${name}/scammerGotInvestment`]: false // 重置每回合
-            };
-          
+                [`rooms/${room}/players/${name}/money`]: newMoney,
+                [`rooms/${room}/players/${name}/done`]: false,
+                [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
+                [`rooms/${room}/players/${name}/agentOption/invested`]: false,
+                [`rooms/${room}/players/${name}/scammerGotInvestment`]: false // 重置每回合
+              };
+            
             if (isScammer && !gotInvested) {
               updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
             }
@@ -92,10 +92,9 @@
               updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
               updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
             }
-          
+
             await update(ref(db), updates);
           }
-
 
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
@@ -164,14 +163,6 @@
       await update(myInvestmentRef, {
         [target]: (myInvestments[target] || 0) + amount
       });
-
-      // ✅ 詐騙者立即加 200 並記錄
-      if (targetData.role === "詐騙者") {
-        await update(targetRef, {
-          wasScammerInvested: true,
-          money: (targetData.money || 0) + 200
-        });
-      }
 
       amountInput.value = "";
       investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
