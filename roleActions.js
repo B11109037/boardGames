@@ -22,31 +22,6 @@ export async function renderRoleUI(playerName, roomCode) {
     <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
   `;
 
-  // ✅ 詐騙者被投資立即加 200 元並記錄
-  if (role === "詐騙者") {
-    const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-    onValue(investorsRef, async (snap) => {
-      const investors = snap.val() || {};
-      if (Object.keys(investors).length > 0) {
-        const wasRef = ref(db, `rooms/${roomCode}/players/${playerName}/wasScammerInvested`);
-        const wasSnap = await get(wasRef);
-        if (!wasSnap.exists() || wasSnap.val() === false) {
-          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-          const moneySnap = await get(moneyRef);
-          const current = moneySnap.exists() ? moneySnap.val() : 0;
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/wasScammerInvested`]: true,
-            [`rooms/${roomCode}/players/${playerName}/money`]: current + 200
-          });
-          const extraInfo = document.getElementById("roleExtraInfo");
-          if (extraInfo) {
-            extraInfo.innerHTML += `<p style="color:green;">✅ 本回合已被投資，已獲得 $200 獎勵</p>`;
-          }
-        }
-      }
-    });
-  }
-
   // ============ 接收投資並分配金額邏輯 ============
   let latestInvestors = {};
   let latestGivenBack = {};
@@ -121,7 +96,7 @@ export async function renderRoleUI(playerName, roomCode) {
         status.textContent = "❌ 金額不足，無法分配！";
         return;
       }
-
+//接續上面
      const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
       const targetMoneySnap = await get(targetMoneyRef);
       const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
@@ -147,7 +122,30 @@ export async function renderRoleUI(playerName, roomCode) {
       status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
     });
   }
+   // ============ 詐騙者加錢機制 ============
+  if (role === "詐騙者") {
+      onValue(investorsRef, async (snap) => {
+      const investors = snap.val() || {};
+      if (Object.keys(investors).length > 0) {
+        const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
+        const alreadySetSnap = await get(gotInvestmentRef);
+        const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
+  
+        if (!alreadySet) {
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+  
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
+            [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
+          });
+        }
+      }
+    });
+  }
 
+  
   // ============ 普通人查看收到的金額 ============
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
