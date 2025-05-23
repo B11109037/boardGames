@@ -170,6 +170,43 @@ export async function renderRoleUI(playerName, roomCode) {
         }
       });
     }
+   // ============ 投資代理人分配金額時記錄變數為 true ============
+  if (role === "投資代理人") {
+    const allocateBtn = document.getElementById("allocateConfirmBtn");
+    if (allocateBtn) {
+      allocateBtn.addEventListener("click", async () => {
+        const target = document.getElementById("allocateTarget").value;
+        const amount = parseInt(document.getElementById("allocateAmount").value);
+        if (target && !isNaN(amount) && amount > 0) {
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/agentDistributed`]: true
+          });
+        }
+      });
+    }
+
+    // 回合數為 0 時若 agentDistributed 為 false，扣除 1000 元
+    const roundsLeftRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
+    onValue(roundsLeftRef, async (snap) => {
+      const roundsLeft = snap.exists() ? snap.val() : 0;
+      if (roundsLeft === 0) {
+        const distributedRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentDistributed`);
+        const distributedSnap = await get(distributedRef);
+        const wasDistributed = distributedSnap.exists() ? distributedSnap.val() : false;
+
+        if (!wasDistributed) {
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: Math.max(0, currentMoney - 1000)
+          });
+        }
+      }
+    });
+  }
+
   // ============ 普通人查看收到的金額 ============
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
