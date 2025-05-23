@@ -132,7 +132,7 @@ export async function renderRoleUI(playerName, roomCode) {
         const value = snap.exists() ? snap.val() : false;
         if (!value && notice) {
           notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
-          notice.style.color = "orange";
+          notice.style.color = "red";
           notice.style.display = "block";
         }
       });
@@ -141,7 +141,7 @@ export async function renderRoleUI(playerName, roomCode) {
       const alreadyGot = gotInvestmentSnap.exists() ? gotInvestmentSnap.val() : false;
       if (!alreadyGot && notice) {
         notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
-        notice.style.color = "orange";
+        notice.style.color = "red";
         notice.style.display = "block";
       }
   
