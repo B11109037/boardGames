@@ -124,11 +124,24 @@ export async function renderRoleUI(playerName, roomCode) {
   }
    // ============ 詐騙者加錢機制 ============
   if (role === "詐騙者") {
-      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-      onValue(investorsRef, async (snap) => {
+    const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+    const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
+  
+    // 顯示「尚未被投資」提示
+    const notice = document.getElementById("scammerNotice");
+    const gotInvestmentSnap = await get(gotInvestmentRef);
+    const alreadyGot = gotInvestmentSnap.exists() ? gotInvestmentSnap.val() : false;
+  
+    if (!alreadyGot && notice) {
+      notice.textContent = "⚠️ 今日尚未有人投資你，請想辦法吸引投資！";
+      notice.style.color = "orange";
+      notice.style.display = "block";
+    }
+  
+    // 監聽是否有人投資你
+    onValue(investorsRef, async (snap) => {
       const investors = snap.val() || {};
       if (Object.keys(investors).length > 0) {
-        const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
         const alreadySetSnap = await get(gotInvestmentRef);
         const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
   
@@ -141,14 +154,17 @@ export async function renderRoleUI(playerName, roomCode) {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
             [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
           });
-          const notice = document.getElementById("scammerNotice");
+  
           if (notice) {
             notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
+            notice.style.color = "green";
+            notice.style.display = "block";
           }
         }
       }
     });
   }
+
 
   
   // ============ 普通人查看收到的金額 ============
