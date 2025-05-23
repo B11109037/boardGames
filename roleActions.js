@@ -141,6 +141,10 @@ export async function renderRoleUI(playerName, roomCode) {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
             [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
           });
+          const notice = document.getElementById("scammerNotice");
+          if (notice) {
+            notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
+          }
         }
       }
     });
