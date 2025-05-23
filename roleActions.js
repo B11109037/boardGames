@@ -124,6 +124,7 @@ export async function renderRoleUI(playerName, roomCode) {
   }
    // ============ 詐騙者加錢機制 ============
   if (role === "詐騙者") {
+      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
       onValue(investorsRef, async (snap) => {
       const investors = snap.val() || {};
       if (Object.keys(investors).length > 0) {
