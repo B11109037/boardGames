@@ -1,3 +1,4 @@
+//5/23加入投資面板
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -97,12 +98,12 @@ export async function renderRoleUI(playerName, roomCode) {
           document.getElementById("investAmount").disabled = true;
         });
 
-        // ✅ 即時更新投資你的人（分配對象選單）
         const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-        onValue(investorsRef, snap => {
+        get(investorsRef).then(snap => {
           const select = document.getElementById("allocateTarget");
           select.innerHTML = "";
           const investors = snap.val() || {};
+
           const keys = Object.keys(investors);
           if (keys.length === 0) {
             const option = document.createElement("option");
@@ -120,7 +121,6 @@ export async function renderRoleUI(playerName, roomCode) {
           }
         });
 
-        // ✅ 分配金額：扣款、寫入接收者欄位
         document.getElementById("allocateConfirm").addEventListener("click", async () => {
           const targetName = document.getElementById("allocateTarget").value;
           const amount = parseInt(document.getElementById("allocateAmount").value);
@@ -132,20 +132,8 @@ export async function renderRoleUI(playerName, roomCode) {
             return;
           }
 
-          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-          const moneySnap = await get(moneyRef);
-          let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-
-          if (currentMoney < amount) {
-            result.style.color = "red";
-            result.textContent = "💸 餘額不足，無法分配";
-            return;
-          }
-
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
-            [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: { amount }
-          });
+          const targetRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
+          await update(targetRef, { amount });
 
           result.style.color = "green";
           result.textContent = `✅ 已分配 $${amount} 給 ${targetName}`;
@@ -155,49 +143,44 @@ export async function renderRoleUI(playerName, roomCode) {
       }
 
       // 尚未選擇方案，顯示選項
-      section.style.display = "block";
-      if (!existing || !existing.options || !existing.options.A || !existing.options.B) {
-  console.error("❌ 無法讀取代理方案，資料為 null 或格式錯誤：", existing);
-  section.innerHTML = `<p style='color:red;'>❌ 無法顯示代理選項，請重新整理頁面或聯絡管理員</p>`;
-  return;
-}
-const optA = existing.options.A;
-const optB = existing.options.B;
-      section.innerHTML = `
-        <h3>本日代理選項：</h3>
-        <div id="agentOptions">
-          <p>A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
-          <p>B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
-          <button id="chooseA">選擇 A</button>
-          <button id="chooseB">選擇 B</button>
-          <p id="agentStatus" style="color: green;"></p>
-        </div>
-      `;
+        section.style.display = "block";
+        const optA = existing.options.A;
+        const optB = existing.options.B;
+        section.innerHTML = `
+          <h3>本日代理選項：</h3>
+          <div id="agentOptions">
+            <p>A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
+            <p>B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
+            <button id="chooseA">選擇 A</button>
+            <button id="chooseB">選擇 B</button>
+            <p id="agentStatus" style="color: green;"></p>
+          </div>
+        `;
 
-      document.getElementById("chooseA").addEventListener("click", async () => {
-        await lockAgentOption("A", existing.options.A);
-        renderRoleUI(playerName, roomCode);
-      });
-
-      document.getElementById("chooseB").addEventListener("click", async () => {
-        await lockAgentOption("B", existing.options.B);
-        renderRoleUI(playerName, roomCode);
-      });
-
-      async function lockAgentOption(option, detail) {
-        const status = document.getElementById("agentStatus");
-        await update(ref(db), {
-          [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
-            option,
-            chance: detail.chance,
-            multiplier: detail.multiplier,
-            roundsLeft: detail.duration,
-            locked: true,
-            invested: false
-          }
+        document.getElementById("chooseA").addEventListener("click", async () => {
+          await lockAgentOption("A", existing.options.A);
+          renderRoleUI(playerName, roomCode);
         });
-        status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-      }
+
+        document.getElementById("chooseB").addEventListener("click", async () => {
+          await lockAgentOption("B", existing.options.B);
+          renderRoleUI(playerName, roomCode);
+        });
+
+        async function lockAgentOption(option, detail) {
+          const status = document.getElementById("agentStatus");
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
+              option,
+              chance: detail.chance,
+              multiplier: detail.multiplier,
+              roundsLeft: detail.duration,
+              locked: true,
+              invested: false
+            }
+          });
+          status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
+        }
     });
   }
 }
