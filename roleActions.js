@@ -1,4 +1,157 @@
-//5/23加入投資面板
+// ✅ 結合投資代理人投資邏輯 + 接收投資並分配金額邏輯
+import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+export async function renderRoleUI(playerName, roomCode) {
+  const db = getDatabase();
+  const roleRef = ref(db, `rooms/${roomCode}/players/${playerName}/role`);
+  const roleSnap = await get(roleRef);
+  const rolePanel = document.getElementById("rolePanel");
+
+  if (!roleSnap.exists()) {
+    rolePanel.innerHTML = `<p>❌ 無法讀取角色資訊</p>`;
+    return;
+  }
+
+  const role = roleSnap.val();
+
+  rolePanel.innerHTML = `
+    <h3>角色資訊</h3>
+    <div id="role">${role}</div>
+    <div id="roleExtraInfo">等待投資資訊...</div>
+    <div id="allocateSection" class="card" style="margin-top: 10px; display: none;"></div>
+    <div id="agentOptionsSection" class="card" style="margin-top: 10px; display: none;"></div>
+  `;
+
+  // ============ 接收投資並分配金額邏輯 ============
+  let latestInvestors = {};
+  let latestGivenBack = {};
+  function updateInvestorDisplay() {
+    const extraInfo = document.getElementById("roleExtraInfo");
+    if (!extraInfo) return;
+    if (Object.keys(latestInvestors).length === 0) {
+      extraInfo.innerHTML = "⚠️ 目前還沒有人投資你";
+      return;
+    }
+    let html = "<h4>投資你的人：</h4>";
+    for (let name in latestInvestors) {
+      const invested = latestInvestors[name];
+      const returned = latestGivenBack[name] || 0;
+      html += `<p>${name}：$${invested}（已回饋 $${returned}）</p>`;
+    }
+    extraInfo.innerHTML = html;
+  }
+
+  if (role === "詐騙者" || role === "投資代理人") {
+    const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+    const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
+    const select = document.getElementById("allocateTarget");
+    const allocateSection = document.getElementById("allocateSection");
+
+    allocateSection.innerHTML = `
+      <h3>我要分配金額：</h3>
+      <label for="allocateTarget">選擇對象：</label>
+      <select id="allocateTarget"></select>
+      <label for="allocateAmount">分配金額：</label>
+      <input type="number" id="allocateAmount" placeholder="輸入金額，例如 20" min="1">
+      <button id="allocateConfirmBtn">確認分配</button>
+      <p id="allocateStatus" style="color: green;"></p>
+    `;
+
+    onValue(investorsRef, (snap) => {
+      latestInvestors = snap.val() || {};
+      const targetSelect = document.getElementById("allocateTarget");
+      targetSelect.innerHTML = "";
+      for (let name in latestInvestors) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        targetSelect.appendChild(option);
+      }
+      allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
+      updateInvestorDisplay();
+    });
+
+    onValue(givenBackRef, (snap) => {
+      latestGivenBack = snap.val() || {};
+      updateInvestorDisplay();
+    });
+
+    document.getElementById("allocateConfirmBtn").addEventListener("click", async () => {
+      const targetName = document.getElementById("allocateTarget").value;
+      const amount = parseInt(document.getElementById("allocateAmount").value);
+      const status = document.getElementById("allocateStatus");
+
+      if (!targetName || isNaN(amount) || amount <= 0) {
+        status.style.color = "red";
+        status.textContent = "請輸入正確金額並選擇對象";
+        return;
+      }
+
+      const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+      const moneySnap = await get(moneyRef);
+      const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+
+      if (currentMoney < amount) {
+        status.style.color = "red";
+        status.textContent = "❌ 金額不足，無法分配！";
+        return;
+      }
+
+      const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
+      const targetMoneySnap = await get(targetMoneyRef);
+      const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
+
+      const receivedRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
+      const receivedSnap = await get(receivedRef);
+      const oldReceived = receivedSnap.exists() ? receivedSnap.val() : 0;
+
+      const givenBackTargetRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`);
+      const givenBackSnap = await get(givenBackTargetRef);
+      const alreadyGiven = givenBackSnap.exists() ? givenBackSnap.val() : 0;
+
+      await update(ref(db), {
+        [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: oldReceived + amount,
+        [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
+        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount,
+        [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount
+      });
+
+      document.getElementById("allocateAmount").value = "";
+      document.getElementById("allocateTarget").selectedIndex = 0;
+      status.style.color = "green";
+      status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
+    });
+  }
+
+  // ============ 普通人查看收到的金額 ============
+  if (role !== "詐騙者" && role !== "投資代理人") {
+    const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
+    onValue(receivedRef, (snap) => {
+      const received = snap.val() || {};
+      let receivedPanel = document.getElementById("receivedPanel");
+      if (!receivedPanel) {
+        receivedPanel = document.createElement("div");
+        receivedPanel.id = "receivedPanel";
+        receivedPanel.style.marginTop = "20px";
+        rolePanel.appendChild(receivedPanel);
+      }
+
+      receivedPanel.innerHTML = "";
+      if (Object.keys(received).length === 0) {
+        receivedPanel.innerHTML = `<h4>你尚未收到任何金額</h4>`;
+      } else {
+        let html = "<h4>你收到的金額：</h4>";
+        for (let name in received) {
+          html += `<p>${name} 分配給你 $${received[name]}</p>`;
+        }
+        receivedPanel.innerHTML = html;
+      }
+    });
+  }
+
+  // ============ 投資代理人選擇方案與投資邏輯 ============
+  if (role === "投資代理人") {
+    //5/23 投資代理人結束動作可以再次投資
 import { getDatabase, ref, get, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 export async function renderRoleUI(playerName, roomCode) {
@@ -29,39 +182,49 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
 
-      if (existing && String(existing.locked) === "true") {
+      if (existing?.locked === true) {
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
           <p>成功機率 ${existing.chance}%、回報倍率 ${existing.multiplier} 倍</p>
-          <p>剩餘回合：${existing.roundsLeft}</p>
+          <p id="agentRoundsLeft">剩餘回合：${existing.roundsLeft}</p>
           <div class="card" style="margin-top: 10px;">
             <label for="investAmount">投入金額：</label>
             <input type="number" id="investAmount" placeholder="輸入金額，例如 20" min="1">
             <button id="investAgent">確認投資</button>
             <p id="investResult" style="color: green;"></p>
           </div>
-          <div class="card" style="margin-top: 10px;">
-            <div style="margin-bottom: 10px;">
-              <label for="allocateTarget">分配對象：</label><br>
-              <select id="allocateTarget"><option disabled selected>載入中...</option></select>
-            </div>
-            <div style="margin-bottom: 10px;">
-              <label for="allocateAmount">分配金額：</label><br>
-              <input type="number" id="allocateAmount" placeholder="輸入金額" min="1">
-            </div>
-            <button id="allocateConfirm">確認分配</button>
-            <p id="allocateResult" style="color: green;"></p>
-          </div>
         `;
 
-        document.getElementById("investAgent").addEventListener("click", async () => {
-          const amount = parseInt(document.getElementById("investAmount").value);
-          const result = document.getElementById("investResult");
+        const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
+        onValue(roundsRef, snap => {
+          const el = document.getElementById("agentRoundsLeft");
+          if (el) el.textContent = `剩餘回合：${snap.val() ?? 0}`;
+        });
 
+        // ✅ 關鍵修正：即時監聽 invested 狀態來控制按鈕
+        onValue(agentOptionRef, (snap) => {
+          const current = snap.val() || {};
+          const invested = current.invested === true;
+          const investBtn = document.getElementById("investAgent");
+          const amountInput = document.getElementById("investAmount");
+          if (investBtn && amountInput) {
+            investBtn.disabled = invested;
+            amountInput.disabled = invested;
+          }
+        });
+
+        document.getElementById("investAgent").addEventListener("click", async () => {
+          const investBtn = document.getElementById("investAgent");
+          const amountInput = document.getElementById("investAmount");
+          const result = document.getElementById("investResult");
+          investBtn.disabled = true;
+
+          const amount = parseInt(amountInput.value);
           if (isNaN(amount) || amount <= 0) {
             result.style.color = "red";
             result.textContent = "請輸入有效金額！";
+            investBtn.disabled = false;
             return;
           }
 
@@ -72,115 +235,96 @@ export async function renderRoleUI(playerName, roomCode) {
           if (currentMoney < amount) {
             result.style.color = "red";
             result.textContent = "💸 餘額不足！";
+            investBtn.disabled = false;
             return;
           }
 
           const success = Math.random() * 100 < existing.chance;
           let profit = 0;
-
           if (success) {
             profit = Math.round(amount * existing.multiplier);
             currentMoney = currentMoney - amount + profit;
             result.style.color = "green";
-            result.textContent = `✅ 投資成功！你獲得 $${profit} 💡 請點擊「結束本回合動作」`;
+            result.textContent = `✅ 投資成功！你獲得 $${profit} 💡請點擊「結束本回合動作」`;
           } else {
             currentMoney = currentMoney - amount;
             result.style.color = "red";
-            result.textContent = `❌ 投資失敗，損失 $${amount} 💡 請點擊「結束本回合動作」`;
+            result.textContent = `❌ 投資失敗，損失 $${amount} 💡請點擊「結束本回合動作」`;
           }
 
           await update(ref(db), {
             [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
             [`rooms/${roomCode}/players/${playerName}/agentOption/invested`]: true
           });
-
-          document.getElementById("investAgent").disabled = true;
-          document.getElementById("investAmount").disabled = true;
-        });
-
-        const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-        get(investorsRef).then(snap => {
-          const select = document.getElementById("allocateTarget");
-          select.innerHTML = "";
-          const investors = snap.val() || {};
-
-          const keys = Object.keys(investors);
-          if (keys.length === 0) {
-            const option = document.createElement("option");
-            option.disabled = true;
-            option.selected = true;
-            option.textContent = "⚠️ 無投資者";
-            select.appendChild(option);
-          } else {
-            for (let name of keys) {
-              const option = document.createElement("option");
-              option.value = name;
-              option.textContent = `${name}（$${investors[name]}）`;
-              select.appendChild(option);
-            }
-          }
-        });
-
-        document.getElementById("allocateConfirm").addEventListener("click", async () => {
-          const targetName = document.getElementById("allocateTarget").value;
-          const amount = parseInt(document.getElementById("allocateAmount").value);
-          const result = document.getElementById("allocateResult");
-
-          if (!targetName || isNaN(amount) || amount <= 0) {
-            result.style.color = "red";
-            result.textContent = "請輸入正確的對象與金額";
-            return;
-          }
-
-          const targetRef = ref(db, `rooms/${roomCode}/players/${targetName}/received/${playerName}`);
-          await update(targetRef, { amount });
-
-          result.style.color = "green";
-          result.textContent = `✅ 已分配 $${amount} 給 ${targetName}`;
         });
 
         return;
       }
 
-      // 尚未選擇方案，顯示選項
-        section.style.display = "block";
-        const optA = existing.options.A;
-        const optB = existing.options.B;
-        section.innerHTML = `
-          <h3>本日代理選項：</h3>
-          <div id="agentOptions">
-            <p>A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
-            <p>B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
-            <button id="chooseA">選擇 A</button>
-            <button id="chooseB">選擇 B</button>
-            <p id="agentStatus" style="color: green;"></p>
-          </div>
-        `;
+      // 尚未選擇方案 → 建立新選項
+      if (!existing || !existing.options || existing.locked === false) {
+        const optionA = {
+          chance: Math.floor(Math.random() * 51) + 50,
+          multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
+          duration: Math.floor(Math.random() * 4) + 1
+        };
+        const optionB = {
+          chance: Math.floor(Math.random() * 31) + 20,
+          multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
+          duration: Math.floor(Math.random() * 4) + 1
+        };
 
-        document.getElementById("chooseA").addEventListener("click", async () => {
-          await lockAgentOption("A", existing.options.A);
-          renderRoleUI(playerName, roomCode);
+        existing = {
+          options: { A: optionA, B: optionB },
+          locked: false
+        };
+        await set(agentOptionRef, existing);
+      }
+
+      // 顯示選擇選項
+      section.style.display = "block";
+      const optA = existing.options.A;
+      const optB = existing.options.B;
+      section.innerHTML = `
+        <h3>本日代理選項：</h3>
+        <div id="agentOptions">
+          <p id="optionA">A：成功機率 ${optA.chance}%、回報倍率 ${optA.multiplier} 倍、持續 ${optA.duration} 回合</p>
+          <p id="optionB">B：成功機率 ${optB.chance}%、回報倍率 ${optB.multiplier} 倍、持續 ${optB.duration} 回合</p>
+          <button id="chooseA">選擇 A</button>
+          <button id="chooseB">選擇 B</button>
+          <p id="agentStatus" style="color: green;"></p>
+        </div>
+      `;
+
+      document.getElementById("chooseA").addEventListener("click", async () => {
+        await lockAgentOption("A", existing.options.A);
+        renderRoleUI(playerName, roomCode);
+      });
+
+      document.getElementById("chooseB").addEventListener("click", async () => {
+        await lockAgentOption("B", existing.options.B);
+        renderRoleUI(playerName, roomCode);
+      });
+
+      async function lockAgentOption(option, detail) {
+        const status = document.getElementById("agentStatus");
+
+        await update(ref(db), {
+          [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
+            option,
+            chance: detail.chance,
+            multiplier: detail.multiplier,
+            roundsLeft: detail.duration,
+            locked: true,
+            invested: false
+          }
         });
 
-        document.getElementById("chooseB").addEventListener("click", async () => {
-          await lockAgentOption("B", existing.options.B);
-          renderRoleUI(playerName, roomCode);
-        });
-
-        async function lockAgentOption(option, detail) {
-          const status = document.getElementById("agentStatus");
-          await update(ref(db), {
-            [`rooms/${roomCode}/players/${playerName}/agentOption`]: {
-              option,
-              chance: detail.chance,
-              multiplier: detail.multiplier,
-              roundsLeft: detail.duration,
-              locked: true,
-              invested: false
-            }
-          });
-          status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
-        }
+        status.style.color = "green";
+        status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
+      }
     });
+  }
+}
   }
 }
