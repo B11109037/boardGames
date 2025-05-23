@@ -7,7 +7,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, get, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-    import { renderRoleUI } from "./roleActions.js";
+    import { renderRoleUI, generateAgentOptions } from "./roleActions.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7q0Pv2DtGZ5XripYcDOVxQQcIrkolzdE",
@@ -79,11 +79,18 @@
               [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft
             };
 
+            if (data.role === "詐騙者") {
+              if (data.wasScammerInvested !== true) {
+                updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+              }
+              updates[`rooms/${room}/players/${name}/wasScammerInvested`] = false;
+            }
+
             if (roundsLeft <= 0 && data.role === "投資代理人") {
               updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
               updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
               updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
-              updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
+              updates[`rooms/${room}/players/${name}/agentOption/options`] = generateAgentOptions();
             } else {
               updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
             }
@@ -158,6 +165,14 @@
       await update(myInvestmentRef, {
         [target]: (myInvestments[target] || 0) + amount
       });
+
+      // ✅ 詐騙者立即加 200 並記錄
+      if (targetData.role === "詐騙者") {
+        await update(targetRef, {
+          wasScammerInvested: true,
+          money: (targetData.money || 0) + 200
+        });
+      }
 
       amountInput.value = "";
       investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
