@@ -58,6 +58,10 @@ export async function renderRoleUI(playerName, roomCode) {
 
     const select = document.getElementById("allocateTarget");
 
+    // 🧠 詐騙者前一回合是否有被投資狀態
+    const statusRef = ref(db, `rooms/${roomCode}/players/${playerName}/scamStatus`);
+    let previousHadInvestor = null;
+
     onValue(investorsRef, async (snap) => {
       latestInvestors = snap.val() || {};
       select.innerHTML = "";
@@ -70,18 +74,25 @@ export async function renderRoleUI(playerName, roomCode) {
       allocateSection.style.display = Object.keys(latestInvestors).length > 0 ? "block" : "none";
       updateInvestorDisplay();
 
-      // ✅ 詐騙者投資獎勵邏輯
+      // ✅ 修正版詐騙者邏輯：本回合有人投資 → 儲存標記；下回合根據上次標記加減錢
       if (role === "詐騙者") {
         const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
         const moneySnap = await get(moneyRef);
         let currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-        if (Object.keys(latestInvestors).length > 0) {
+
+        const statusSnap = await get(statusRef);
+        const lastStatus = statusSnap.exists() ? statusSnap.val() : null;
+
+        if (lastStatus === true) {
           currentMoney += 200;
-        } else {
+        } else if (lastStatus === false) {
           currentMoney -= 200;
         }
+
+        // 更新金額與這回合狀態
         await update(ref(db), {
-          [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney
+          [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney,
+          [`rooms/${roomCode}/players/${playerName}/scamStatus`]: Object.keys(latestInvestors).length > 0
         });
       }
     });
@@ -163,6 +174,7 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
   }
+
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
