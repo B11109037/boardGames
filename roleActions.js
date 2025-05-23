@@ -122,7 +122,6 @@ export async function renderRoleUI(playerName, roomCode) {
       status.textContent = `✅ 成功分配 ${targetName} $${amount}`;
     });
   }
-    // ============詐騙者功能 ============
     // ============ 詐騙者加錢機制 ============
   if (role === "詐騙者") {
       const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
