@@ -123,6 +123,33 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
     // ============詐騙者功能 ============
+    // ============ 詐騙者加錢機制 ============
+  if (role === "詐騙者") {
+      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+      onValue(investorsRef, async (snap) => {
+      const investors = snap.val() || {};
+      if (Object.keys(investors).length > 0) {
+        const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
+        const alreadySetSnap = await get(gotInvestmentRef);
+        const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
+  
+        if (!alreadySet) {
+          const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+          const moneySnap = await get(moneyRef);
+          const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+  
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
+            [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
+          });
+          const notice = document.getElementById("scammerNotice");
+          if (notice) {
+            notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
+          }
+        }
+      }
+    });
+  }
   // ============ 普通人查看收到的金額 ============
   if (role !== "詐騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
