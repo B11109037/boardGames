@@ -69,34 +69,33 @@
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
+            const isScammer = data.role === "詐騙者";
+            const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = (data.agentOption?.roundsLeft ?? 1) - 1;
-
+          
             const updates = {
               [`rooms/${room}/players/${name}/money`]: newMoney,
               [`rooms/${room}/players/${name}/done`]: false,
               [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
-              [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft
+              [`rooms/${room}/players/${name}/agentOption/invested`]: false,
+              [`rooms/${room}/players/${name}/scammerGotInvestment`]: false // 重置每回合
             };
-
-            if (data.role === "詐騙者") {
-              if (data.wasScammerInvested !== true) {
-                updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
-              }
-              updates[`rooms/${room}/players/${name}/wasScammerInvested`] = false;
+          
+            if (isScammer && !gotInvested) {
+              updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
             }
-
+          
             if (roundsLeft <= 0 && data.role === "投資代理人") {
               updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
               updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
               updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
-              updates[`rooms/${room}/players/${name}/agentOption/options`] = generateAgentOptions();
-            } else {
-              updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
+              updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
             }
-
+          
             await update(ref(db), updates);
           }
+
 
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
