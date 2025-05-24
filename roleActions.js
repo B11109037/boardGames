@@ -218,39 +218,10 @@ export async function renderRoleUI(playerName, roomCode) {
         `;
 
         const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
-        onValue(roundsRef, async (snap) => {    // 加 async !!
+        onValue(roundsRef, async  => {
           const el = document.getElementById("agentRoundsLeft");
           const roundsLeft = snap.val() ?? 0;   // 正確取得 roundLeft
           if (el) el.textContent = `剩餘回合：${roundsLeft}`;
-        
-          // 只判斷 roundLeft == 0 , 扣1000元
-          if (roundsLeft === 0) {
-            // 檢查有無投資人
-            const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-            const investorsSnap = await get(investorsRef);
-            const investors = investorsSnap.exists() ? investorsSnap.val() : {};
-        
-            if (Object.keys(investors).length > 0) {
-              // 檢查 hasGivenBack 狀態
-              const hasGivenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/hasGivenBack`);
-              const hasGivenBackSnap = await get(hasGivenBackRef);
-              const hasGivenBack = hasGivenBackSnap.exists() ? hasGivenBackSnap.val() : false;
-        
-              if (!hasGivenBack) {
-                // 扣 1000 元
-                const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-                const moneySnap = await get(moneyRef);
-                const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-        
-                await update(ref(db), {
-                  [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - 1000
-                });
-                notice.textContent = "由於本回合沒有回饋投資人，已被扣 1000 元！";
-                notice.style.color = "red";
-                notice.style.display = "block";
-              }
-            }
-          }
         });
 
         onValue(agentOptionRef, (snap) => {
