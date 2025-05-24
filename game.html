@@ -80,7 +80,6 @@
                 [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
                 [`rooms/${room}/players/${name}/agentOption/invested`]: false,
                 [`rooms/${room}/players/${name}/scammerGotInvestment`]: false // 重置每回合
-                [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft//代理人扣除回合數
               };
             
             if (isScammer && !gotInvested) {
@@ -92,6 +91,7 @@
               updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
               updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
               updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
+              updates[`rooms/${room}/players/${name}/agentOption/roundsLeft`] = roundsLeft;
             }
 
             await update(ref(db), updates);
