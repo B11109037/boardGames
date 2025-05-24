@@ -77,7 +77,6 @@
             const updates = {
                 [`rooms/${room}/players/${name}/money`]: newMoney,
                 [`rooms/${room}/players/${name}/done`]: false,
-                [`rooms/${room}/players/${name}/rounds`]: (data.rounds ?? 1) - 1,
                 [`rooms/${room}/players/${name}/agentOption/invested`]: false, //代理人重製投資功能
                 [`rooms/${room}/players/${name}/scammerGotInvestment`]: false,// 重置每回合
                 [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft,//回合數減去
