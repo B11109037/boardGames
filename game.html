@@ -73,7 +73,7 @@
             const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
-            const notice = document.getElementById("scammerNotice");
+
             
             const updates = {
                 [`rooms/${room}/players/${name}/money`]: newMoney,
@@ -89,6 +89,7 @@
           
              // ✅ 代理人，回合歸零自動重置
               if (data.role === "投資代理人") {
+                const notice = document.getElementById("scammerNotice");
                 // 只在這回合 roundsLeft 剛好變 0 的時候檢查
                 if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
                   // 有投資人且沒回饋才扣錢
