@@ -207,7 +207,7 @@ export async function renderRoleUI(playerName, roomCode) {
         if (notice) {
           notice.textContent = message;
           notice.style.color = message ? "red" : "green";
-          notice.style.display = message ? "block" : "none";
+          notice.style.display = message ? "block" : "block";
         }
       });
 
