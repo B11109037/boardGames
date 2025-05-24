@@ -218,7 +218,7 @@ export async function renderRoleUI(playerName, roomCode) {
         `;
 
         const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
-        onValue(roundsRef, async  => {
+        onValue(roundsRef, snap => {
           const el = document.getElementById("agentRoundsLeft");
           const roundsLeft = snap.val() ?? 0;   // 正確取得 roundLeft
           if (el) el.textContent = `剩餘回合：${roundsLeft}`;
