@@ -221,6 +221,34 @@ export async function renderRoleUI(playerName, roomCode) {
         onValue(roundsRef, snap => {
           const el = document.getElementById("agentRoundsLeft");
           if (el) el.textContent = `剩餘回合：${snap.val() ?? 0}`;
+          
+          // ！只判斷 roundLeft == 0 , 扣1000元
+          if (roundsLeft === 0) {
+            // 檢查有無投資人
+            const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
+            const investorsSnap = await get(investorsRef);
+            const investors = investorsSnap.exists() ? investorsSnap.val() : {};
+        
+            if (Object.keys(investors).length > 0) {
+              // 檢查 hasGivenBack 狀態
+              const hasGivenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/hasGivenBack`);
+              const hasGivenBackSnap = await get(hasGivenBackRef);
+              const hasGivenBack = hasGivenBackSnap.exists() ? hasGivenBackSnap.val() : false;
+        
+              if (!hasGivenBack) {
+                // 扣 1000 元
+                const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
+                const moneySnap = await get(moneyRef);
+                const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
+        
+                await update(ref(db), {
+                  [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - 1000
+                });
+                // 可加提示
+                alert("由於本回合沒有回饋投資人，已被扣 1000 元！");
+              }
+            }
+          }
         });
 
         onValue(agentOptionRef, (snap) => {
