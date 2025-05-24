@@ -96,7 +96,6 @@ export async function renderRoleUI(playerName, roomCode) {
         status.textContent = "❌ 金額不足，無法分配！";
         return;
       }
-//接續上面
      const targetMoneyRef = ref(db, `rooms/${roomCode}/players/${targetName}/money`);
       const targetMoneySnap = await get(targetMoneyRef);
       const targetMoney = targetMoneySnap.exists() ? targetMoneySnap.val() : 0;
@@ -200,6 +199,17 @@ export async function renderRoleUI(playerName, roomCode) {
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
     const section = document.getElementById("agentOptionsSection");
+    //顯示未回饋訊息
+    const penaltyRef = ref(db, `rooms/${roomCode}/players/${playerName}/penaltyNotice`);
+      onValue(penaltyRef, snap => {
+        const notice = document.getElementById("scammerNotice");
+        const message = snap.exists() ? snap.val() : "";
+        if (notice) {
+          notice.textContent = message;
+          notice.style.color = message ? "red" : "green";
+          notice.style.display = message ? "block" : "none";
+        }
+      });
 
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
