@@ -95,7 +95,7 @@
                   const investors = data.investors || {};
                   if (Object.keys(investors).length > 0 && !data.hasGivenBack) {
                     updates[`rooms/${room}/players/${name}/money`] = (updates[`rooms/${room}/players/${name}/money`] || 0) - 1000;
-                    notice.textContent = "今日尚未回饋，扣除1000元";
+                    notice.textContent = "任職期間未回饋，扣除1000元";
                     notice.style.color = "red";
                     notice.style.display = "block";
                   }
