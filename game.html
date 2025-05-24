@@ -102,13 +102,6 @@
                   // 沒罰則時清空提示
                   updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間請回饋，否則扣除1000元";
                 }
-                // 方案重設
-              //  updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
-                //updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
-               // updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
-              //  updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
-                // hasGivenBack 也要重設
-             //   updates[`rooms/${room}/players/${name}/hasGivenBack`] = false;
               }
             }
             await update(ref(db), updates);
