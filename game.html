@@ -72,7 +72,7 @@
             const isScammer = data.role === "詐騙者";
             const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
-            const roundsLeft = (data.agentOption?.roundsLeft ?? 1) - 1;
+            const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
           
             const updates = {
                 [`rooms/${room}/players/${name}/money`]: newMoney,
@@ -86,13 +86,26 @@
               updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
             }
           
-            if (roundsLeft <= 0 && data.role === "投資代理人") {
-              updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
-              updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
-              updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
-              updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
-            }
-
+             // ✅ 代理人，回合歸零自動重置
+              if (data.role === "投資代理人") {
+                // 只在這回合 roundsLeft 剛好變 0 的時候檢查
+                if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
+                  // 有投資人且沒回饋才扣錢
+                  const investors = data.investors || {};
+                  if (Object.keys(investors).length > 0 && !data.hasGivenBack) {
+                    updates[`rooms/${room}/players/${name}/money`] = (updates[`rooms/${room}/players/${name}/money`] || 0) - 1000;
+                  }
+            
+                  // 方案自動重設
+                  updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
+                  updates[`rooms/${room}/players/${name}/agentOption/option`] = null;
+                  updates[`rooms/${room}/players/${name}/agentOption/invested`] = false;
+                  updates[`rooms/${room}/players/${name}/agentOption/options`] = null;
+            
+                  // 重設 hasGivenBack 狀態
+                  updates[`rooms/${room}/players/${name}/hasGivenBack`] = false;
+                }
+              }
             await update(ref(db), updates);
           }
 
