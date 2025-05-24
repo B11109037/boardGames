@@ -73,7 +73,8 @@
             const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
-          
+            const notice = document.getElementById("scammerNotice");
+            
             const updates = {
                 [`rooms/${room}/players/${name}/money`]: newMoney,
                 [`rooms/${room}/players/${name}/done`]: false,
