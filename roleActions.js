@@ -218,11 +218,12 @@ export async function renderRoleUI(playerName, roomCode) {
         `;
 
         const roundsRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption/roundsLeft`);
-        onValue(roundsRef, snap => {
+        onValue(roundsRef, async (snap) => {    // 加 async !!
           const el = document.getElementById("agentRoundsLeft");
-          if (el) el.textContent = `剩餘回合：${snap.val() ?? 0}`;
-          
-          // ！只判斷 roundLeft == 0 , 扣1000元
+          const roundsLeft = snap.val() ?? 0;   // 正確取得 roundLeft
+          if (el) el.textContent = `剩餘回合：${roundsLeft}`;
+        
+          // 只判斷 roundLeft == 0 , 扣1000元
           if (roundsLeft === 0) {
             // 檢查有無投資人
             const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
@@ -244,7 +245,6 @@ export async function renderRoleUI(playerName, roomCode) {
                 await update(ref(db), {
                   [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - 1000
                 });
-                // 可加提示
                 alert("由於本回合沒有回饋投資人，已被扣 1000 元！");
               }
             }
