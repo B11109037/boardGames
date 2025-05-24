@@ -245,7 +245,9 @@ export async function renderRoleUI(playerName, roomCode) {
                 await update(ref(db), {
                   [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - 1000
                 });
-                alert("由於本回合沒有回饋投資人，已被扣 1000 元！");
+                notice.textContent = "由於本回合沒有回饋投資人，已被扣 1000 元！";
+                notice.style.color = "red";
+                notice.style.display = "block";
               }
             }
           }
