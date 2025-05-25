@@ -194,6 +194,16 @@ export async function renderRoleUI(playerName, roomCode) {
           }
         }
       });
+         // ===== 加入自訂按鈕 =====
+      let scammerBtn = document.getElementById("scammerSpecialBtn");
+      if (!scammerBtn) {
+        scammerBtn = document.createElement("button");
+        scammerBtn.id = "scammerSpecialBtn";
+        scammerBtn.textContent = "⚡ 詐騙者專屬動作";
+        scammerBtn.style =
+          "margin-top:15px;padding:8px 18px;font-size:16px;border-radius:8px;background:#900;color:white;border:none;cursor:pointer;";
+        rolePanel.appendChild(scammerBtn);
+  }
     }
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
