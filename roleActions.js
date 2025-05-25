@@ -42,11 +42,11 @@ export async function renderRoleUI(playerName, roomCode) {
   }
     // 只在詐騙者身份時插入按鈕
   if (role === "詐騙者") {
-    html += "
+    html += `
       <div style="margin-top: 10px;">
         <button id="scamAllBtn" style="background: #d32f2f; color: #fff;">全額捲走</button>
         <p id="scamAllStatus" style="color: #d32f2f;"></p>
-      </div>"
+      </div>`
       ;
   }
   if (role === "詐騙者" || role === "投資代理人") {
