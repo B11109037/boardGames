@@ -38,6 +38,14 @@
         });
       });
 
+      for (const [name, data] of Object.entries(players)) {
+        if (data.role === "普通人") {
+          await update(ref(db), { [`rooms/${room}/players/${name}/choose`]: true });
+        } else {
+          await update(ref(db), { [`rooms/${room}/players/${name}/choose`]: false });
+        }
+      }
+
       renderRoleUI(player, room);
       loadMyInvestments();
 
