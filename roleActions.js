@@ -220,7 +220,15 @@ export async function renderRoleUI(playerName, roomCode) {
           scammerBtn.style.background = "#fff";
           };
         rolePanel.appendChild(scammerBtn);
-  }
+        
+          scammerBtn.addEventListener("click", async () => {
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/choose`]: true
+          });
+          scammerBtn.disabled = true;
+          scammerBtn.textContent = "✅ 已選擇動作";
+        });
+       }
     }
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
