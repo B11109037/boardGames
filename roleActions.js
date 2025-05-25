@@ -200,8 +200,25 @@ export async function renderRoleUI(playerName, roomCode) {
         scammerBtn = document.createElement("button");
         scammerBtn.id = "scammerSpecialBtn";
         scammerBtn.textContent = "⚡ 詐騙者專屬動作";
-        scammerBtn.style =
-          "margin-top:15px;padding:8px 18px;font-size:16px;border-radius:8px;background:#900;color:white;border:none;cursor:pointer;";
+        scammerBtn.style = `
+          margin-top: 12px;
+          padding: 8px 18px;
+          font-size: 16px;
+          border-radius: 8px;
+          background: #fff;
+          color: #111;
+          border: 1.5px solid #d2d2d2;
+          box-shadow: 0 1.5px 8px rgba(0,0,0,0.06);
+          cursor: pointer;
+          font-weight: bold;
+          transition: background 0.2s, color 0.2s;
+          `;
+         scammerBtn.onmouseover = () => {
+          scammerBtn.style.background = "#f0f0f0";
+            };
+        scammerBtn.onmouseleave = () => {
+          scammerBtn.style.background = "#fff";
+          };
         rolePanel.appendChild(scammerBtn);
   }
     }
