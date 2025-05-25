@@ -32,10 +32,13 @@
         return;
       }
       try {
-        const userRef = ref(db, `rooms/${room}/players/${player}`);
-        await update(userRef, { role });
-        alert(`你已選擇角色：${role}`);
-        window.location.href = `game.html?player=${player}&room=${room}`;
+        // 根據角色決定 choose 狀態
+          const choose = (role === "普通人");
+          const userRef = ref(db, `rooms/${room}/players/${player}`);
+          // 一起寫入
+          await update(userRef, { role, choose });
+          alert(`你已選擇角色：${role}`);
+          window.location.href = `game.html?player=${player}&room=${room}`;
       } catch (err) {
         console.error("選擇角色失敗：", err);
         alert("無法儲存角色資料，請稍後再試！");
