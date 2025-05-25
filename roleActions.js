@@ -152,7 +152,34 @@ export async function renderRoleUI(playerName, roomCode) {
       const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
       const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
       const notice = document.getElementById("scammerNotice");
-  
+
+      // 顯示尚未被投資訊息 & 捲款按鈕
+        onValue(investorsRef, (snap) => {
+          const investors = snap.val() || {};
+          if (Object.keys(investors).length === 0 && notice) {
+            notice.innerHTML = `
+              <span>⚠️ 目前還沒有人投資你</span>
+              <br>
+              <button id="runawayBtn" style="margin-top:8px;padding:4px 16px;border-radius:8px;background:#f8d2b0;color:#a25000;font-weight:bold;border:none;cursor:pointer;">
+                捲款潛逃
+              </button>
+            `;
+            notice.style.color = "black";
+            notice.style.display = "block";
+            // 綁定按鈕點擊事件
+            document.getElementById("runawayBtn").onclick = async () => {
+              // 寫入 choose:true
+              await update(ref(db), {
+                [`rooms/${roomCode}/players/${playerName}/choose`]: true,
+                [`rooms/${roomCode}/players/${playerName}/ran`]: true // 捲款標記
+              });
+              notice.textContent = "已啟動捲款！請等待回合結束身份交換。";
+              notice.style.color = "red";
+            };
+          }
+        });
+
+      
       onValue(gotInvestmentRef, (snap) => {
         const value = snap.exists() ? snap.val() : false;
         if (!value && notice) {
