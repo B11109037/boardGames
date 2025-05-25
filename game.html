@@ -110,6 +110,8 @@
                   // 沒罰則時清空提示
                   updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間請回饋，否則扣除1000元";
                 }
+                // 交換身分記錄
+                updates[`rooms/${room}/players/${name}/choose`] = true;
               }
             }
             await update(ref(db), updates);
