@@ -165,7 +165,6 @@ export async function renderRoleUI(playerName, roomCode) {
         notice.style.display = "block";
       }
     });
-  }
 
          // ===== 加入自訂按鈕 =====
       let scammerBtn = document.getElementById("scammerSpecialBtn");
@@ -359,5 +358,5 @@ export async function renderRoleUI(playerName, roomCode) {
         status.textContent = `✅ 已選擇方案 ${option}（尚未投入金額）`;
       }
     });
-  }
+ }
 }
