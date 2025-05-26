@@ -114,7 +114,9 @@
                     (updates[`rooms/${room}/players/${name}/money`] || 0) - 1000;
                   // 提示欄位寫入（給前端 role.js 監聽）
                   updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間未回饋，扣除1000元";
-                } 
+                }
+                // 交換身分記錄
+                updates[`rooms/${room}/players/${name}/choose`] = true;
               }
             }
             await update(ref(db), updates);
