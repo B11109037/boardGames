@@ -94,12 +94,11 @@
             if (isScammer) {
               if (gotInvested) {
                 //有被投資+200元
-                 updates[`rooms/${room}/players/${name}/money`] = newMoney + 200;
+                 updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
               } else {
                 // 這回合沒被投資，要扣 200
                 updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
               }
-                allUpdates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
             }
           
              if (data.role === "投資代理人") {
