@@ -151,21 +151,21 @@
               [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
             }
           
-            // 4. 寫回 Firebase
-            const updates = {};
-            choosers.forEach((player, idx) => {
-              updates[`rooms/${room}/players/${player.name}/role`] = rolesToShuffle[idx];
-              // 也可以順便把 choose 設回 false
-              updates[`rooms/${room}/players/${player.name}/choose`] = false;
-              console.log("交換資料：", updates);
-            });
-            console.log("[交換角色] updates 要寫入：", updates);
-            await update(ref(db), updates);
-             console.log("[交換角色] 已執行寫入");
-            // 你可以給一個全房通知（也可加動畫或訊息）
-            const endRoundNotice = document.getElementById("endRoundNotice");
-            endRoundNotice.textContent = "⚡ 啟動交換，角色已隨機重新分配！";
-            endRoundNotice.style.display = "block";
+            // 4. 交換角色 & 設定 choose
+              const updates = {};
+              choosers.forEach((player, idx) => {
+                const newRole = rolesToShuffle[idx];
+                updates[`rooms/${room}/players/${player.name}/role`] = newRole;
+                // 普通人 choose=true，特殊身分 choose=false
+                updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
+              });
+            
+              await update(ref(db), updates);
+            
+              // 通知
+              const endRoundNotice = document.getElementById("endRoundNotice");
+              endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
+              endRoundNotice.style.display = "block";
           }
         
         
