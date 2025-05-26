@@ -170,10 +170,10 @@
 
       
       // 先組出對方的 updates
-      await updates =(targetRef, {
+      await updates ={
         money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: existingInvestment + amount
-      });
+        [`investors/${player}`]: existingInvestment + amount,
+      };
       
       // 如果對方是詐騙者且本回合還沒被投資過
       if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
