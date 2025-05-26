@@ -114,6 +114,47 @@
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
           endRoundNotice.style.display = "block";
+
+          // ============ 交換角色邏輯 ============
+
+          // 1. 統計 choose==true 的人
+          const choosers = [];
+          const ordinaryCount = Object.values(players).filter(p => p.role === "普通人").length;
+          
+          for (const [name, data] of Object.entries(players)) {
+            if (data.choose === true) {
+              choosers.push({ name, role: data.role });
+            }
+          }
+          
+          // 2. 判斷是否需要交換
+          if (choosers.length > ordinaryCount) {
+            // 3. 隨機打亂角色
+            const rolesToShuffle = choosers.map(p => p.role);
+            // Fisher–Yates 洗牌
+            for (let i = rolesToShuffle.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
+            }
+          
+            // 4. 寫回 Firebase
+            const updates = {};
+            choosers.forEach((player, idx) => {
+              updates[`rooms/${room}/players/${player.name}/role`] = rolesToShuffle[idx];
+              // 也可以順便把 choose 設回 false
+              updates[`rooms/${room}/players/${player.name}/choose`] = false;
+            });
+          
+            await update(ref(db), updates);
+          
+            // 你可以給一個全房通知（也可加動畫或訊息）
+            const endRoundNotice = document.getElementById("endRoundNotice");
+            endRoundNotice.textContent = "⚡ 啟動交換，角色已隨機重新分配！";
+            endRoundNotice.style.display = "block";
+          }
+        
+        
+        
         }
       });
 
