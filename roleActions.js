@@ -147,53 +147,26 @@ export async function renderRoleUI(playerName, roomCode) {
       }
     });
   }
-   // ============ 詐騙者加錢機制 ============
-    if (role === "詐騙者") {
-      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-      const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
-      const notice = document.getElementById("scammerNotice");
-      
-      onValue(gotInvestmentRef, (snap) => {
-        const value = snap.exists() ? snap.val() : false;
-        if (!value && notice) {
-          notice.textContent = "⚠️ 今日尚未有人投資你，將會扣款200元";
-          notice.style.color = "red";
-          notice.style.display = "block";
-        }
-      });
+  // ============ 詐騙者加錢機制（僅提醒訊息功能） ============
+  if (role === "詐騙者") {
+    const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
+    const notice = document.getElementById("scammerNotice");
   
-      const gotInvestmentSnap = await get(gotInvestmentRef);
-      const alreadyGot = gotInvestmentSnap.exists() ? gotInvestmentSnap.val() : false;
-      if (!alreadyGot && notice) {
+    // 監聽 scammerGotInvestment，如果 false 就顯示提醒
+    onValue(gotInvestmentRef, (snap) => {
+      const value = snap.exists() ? snap.val() : false;
+      if (!value && notice) {
         notice.textContent = "⚠️ 今日尚未有人投資你，將會扣款200元";
         notice.style.color = "red";
         notice.style.display = "block";
+      } else if (value && notice) {
+        notice.textContent = "你被投資了，獲得200元獎勵"; // 有被投資就不顯示警告（或可顯示綠色提示）
+        notice.style.color = "green";
+        notice.style.display = "block";
       }
-  
-      onValue(investorsRef, async (snap) => {
-        const investors = snap.val() || {};
-        if (Object.keys(investors).length > 0) {
-          const alreadySetSnap = await get(gotInvestmentRef);
-          const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
-  
-          if (!alreadySet) {
-            const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-            const moneySnap = await get(moneyRef);
-            const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-  
-            await update(ref(db), {
-              [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
-              [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
-            });
-  
-            if (notice) {
-              notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
-              notice.style.color = "green";
-              notice.style.display = "block";
-            }
-          }
-        }
-      });
+    });
+  }
+
          // ===== 加入自訂按鈕 =====
       let scammerBtn = document.getElementById("scammerSpecialBtn");
       if (!scammerBtn) {
