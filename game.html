@@ -129,6 +129,7 @@
           
           // 2. 判斷是否需要交換
           if (choosers.length > ordinaryCount) {
+            console.log("執行角色交換：", choosers.map(x=>x.name), rolesToShuffle);
             // 3. 隨機打亂角色
             const rolesToShuffle = choosers.map(p => p.role);
             // Fisher–Yates 洗牌
@@ -143,6 +144,8 @@
               updates[`rooms/${room}/players/${player.name}/role`] = rolesToShuffle[idx];
               // 也可以順便把 choose 設回 false
               updates[`rooms/${room}/players/${player.name}/choose`] = false;
+              console.log("交換資料：", updates);
+
             });
           
             await update(ref(db), updates);
