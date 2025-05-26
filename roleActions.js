@@ -149,53 +149,60 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
   //接續role.js
- // ============ 詐騙者加錢機制 ============
-    if (role === "詐騙者") {
-      const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
-      const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
-      const notice = document.getElementById("scammerNotice");
+// ============ 詐騙者加錢機制（僅提醒訊息功能） ============
+  if (role === "詐騙者") {
+    const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
+    const notice = document.getElementById("scammerNotice");
   
-      onValue(gotInvestmentRef, (snap) => {
-        const value = snap.exists() ? snap.val() : false;
-        if (!value && notice) {
-          notice.textContent = "⚠️ 今日尚未有人投資你，將會扣款200元";
-          notice.style.color = "red";
-          notice.style.display = "block";
-        }
-      });
-  
-      const gotInvestmentSnap = await get(gotInvestmentRef);
-      const alreadyGot = gotInvestmentSnap.exists() ? gotInvestmentSnap.val() : false;
-      if (!alreadyGot && notice) {
+    // 監聽 scammerGotInvestment，如果 false 就顯示提醒
+    onValue(gotInvestmentRef, (snap) => {
+      const value = snap.exists() ? snap.val() : false;
+      if (!value && notice) {
         notice.textContent = "⚠️ 今日尚未有人投資你，將會扣款200元";
         notice.style.color = "red";
         notice.style.display = "block";
+      } else if (value && notice) {
+        notice.textContent = "✅你被投資了，獲得200元獎勵"; // 有被投資就不顯示警告（或可顯示綠色提示）
+        notice.style.color = "green";
+        notice.style.display = "block";
       }
-  
-      onValue(investorsRef, async (snap) => {
-        const investors = snap.val() || {};
-        if (Object.keys(investors).length > 0) {
-          const alreadySetSnap = await get(gotInvestmentRef);
-          const alreadySet = alreadySetSnap.exists() ? alreadySetSnap.val() : false;
-  
-          if (!alreadySet) {
-            const moneyRef = ref(db, `rooms/${roomCode}/players/${playerName}/money`);
-            const moneySnap = await get(moneyRef);
-            const currentMoney = moneySnap.exists() ? moneySnap.val() : 0;
-  
-            await update(ref(db), {
-              [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney + 200,
-              [`rooms/${roomCode}/players/${playerName}/scammerGotInvestment`]: true
-            });
-  
-            if (notice) {
-              notice.textContent = "🎉 你被投資了，已自動獲得 $200！";
-              notice.style.color = "green";
-              notice.style.display = "block";
-            }
-          }
-        }
-      });
+    });
+
+         // ===== 加入自訂按鈕 =====
+      let scammerBtn = document.getElementById("scammerSpecialBtn");
+      if (!scammerBtn) {
+        scammerBtn = document.createElement("button");
+        scammerBtn.id = "scammerSpecialBtn";
+        scammerBtn.textContent = "⚡ 詐騙者專屬動作";
+        scammerBtn.style = `
+          margin-top: 12px;
+          padding: 8px 18px;
+          font-size: 16px;
+          border-radius: 8px;
+          background: #fff;
+          color: #111;
+          border: 1.5px solid #d2d2d2;
+          box-shadow: 0 1.5px 8px rgba(0,0,0,0.06);
+          cursor: pointer;
+          font-weight: bold;
+          transition: background 0.2s, color 0.2s;
+          `;
+         scammerBtn.onmouseover = () => {
+          scammerBtn.style.background = "#f0f0f0";
+            };
+        scammerBtn.onmouseleave = () => {
+          scammerBtn.style.background = "#fff";
+          };
+        rolePanel.appendChild(scammerBtn);
+        
+          scammerBtn.addEventListener("click", async () => {
+          await update(ref(db), {
+            [`rooms/${roomCode}/players/${playerName}/choose`]: true
+          });
+          scammerBtn.disabled = true;
+          scammerBtn.textContent = "✅ 已選擇動作";
+        });
+       }
     }
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
