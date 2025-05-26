@@ -115,7 +115,11 @@ export async function renderRoleUI(playerName, roomCode) {
         [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount,
         [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount
       });
-
+      //紀錄有回饋
+      await update(ref(db, `rooms/${roomCode}/players/${playerName}`), {
+        hasGivenBack: true
+      });
+      
       document.getElementById("allocateAmount").value = "";
       document.getElementById("allocateTarget").selectedIndex = 0;
       status.style.color = "green";
