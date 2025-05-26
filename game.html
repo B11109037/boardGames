@@ -93,12 +93,13 @@
             //詐騙者扣款
             if (isScammer) {
               if (gotInvested) {
-                // 這回合有被投資：什麼都不用做（因為已經加過 200），只要重置
-                updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false;
+                //有被投資+200元
+                 updates[`rooms/${room}/players/${name}/money`] = newMoney + 200;
               } else {
                 // 這回合沒被投資，要扣 200
                 updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
               }
+                allUpdates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
             }
           
              if (data.role === "投資代理人") {
