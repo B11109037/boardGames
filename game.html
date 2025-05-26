@@ -115,6 +115,9 @@
                   // 提示欄位寫入（給前端 role.js 監聽）
                   updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間未回饋，扣除1000元";
                 }
+                // 下回合 renderRoleUI 會自動產生新選項
+                updates[`rooms/${room}/players/${name}/agentOption/locked`] = false;
+                updates[`rooms/${room}/players/${name}/agentOption/options`] = null; 
                 // 交換身分記錄
                 updates[`rooms/${room}/players/${name}/choose`] = true;
               }
