@@ -129,7 +129,7 @@
           
           // 2. 判斷是否需要交換
           if (choosers.length > ordinaryCount) {
-            console.log("執行角色交換：", choosers.map(x=>x.name), rolesToShuffle);
+            console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
             // 3. 隨機打亂角色
             const rolesToShuffle = choosers.map(p => p.role);
             // Fisher–Yates 洗牌
@@ -145,11 +145,10 @@
               // 也可以順便把 choose 設回 false
               updates[`rooms/${room}/players/${player.name}/choose`] = false;
               console.log("交換資料：", updates);
-
             });
-          
+            console.log("[交換角色] updates 要寫入：", updates);
             await update(ref(db), updates);
-          
+             console.log("[交換角色] 已執行寫入");
             // 你可以給一個全房通知（也可加動畫或訊息）
             const endRoundNotice = document.getElementById("endRoundNotice");
             endRoundNotice.textContent = "⚡ 啟動交換，角色已隨機重新分配！";
