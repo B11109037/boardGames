@@ -121,7 +121,14 @@
             }
             await update(ref(db), updates);
           }
-
+          
+          // 這裡重新 get 最新資料，不能直接用原本的 players 變數
+          const playersRef = ref(db, `rooms/${room}/players`);
+          const playersSnap = await get(playersRef);
+          const newPlayers = playersSnap.val() || {};
+          
+          await exchangeRolesIfNeeded(newPlayers, room, db); // 一定要用新的 players
+          
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
           endRoundNotice.style.display = "block";
@@ -143,8 +150,7 @@
           endTurnStatus.textContent = "";
         }
       });
-      
-     await exchangeRolesIfNeeded(players, room, db);
+
       document.getElementById("endTurnBtn").addEventListener("click", async () => {
         await set(ref(db, `rooms/${room}/players/${player}/done`), true);
       });
