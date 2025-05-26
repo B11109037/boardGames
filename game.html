@@ -129,9 +129,10 @@
           
           // 2. 判斷是否需要交換
           if (choosers.length > ordinaryCount) {
-            console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
+
             // 3. 隨機打亂角色
             const rolesToShuffle = choosers.map(p => p.role);
+            console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
             // Fisher–Yates 洗牌
             for (let i = rolesToShuffle.length - 1; i > 0; i--) {
               const j = Math.floor(Math.random() * (i + 1));
