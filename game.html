@@ -27,7 +27,7 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("playerName").textContent = player;
-       // 餘額即時監聽
+      // 餘額即時監聽
       const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       get(moneyRef).then(async snap => {
         if (!snap.exists()) {
@@ -37,16 +37,16 @@
           document.getElementById("money").textContent = "$" + (snap.val() ?? 0);
         });
       });
-      
-        // ⭐⭐⭐ 角色資訊即時監聽（推薦直接監聽整個玩家物件）
-        const playerRef = ref(db, `rooms/${room}/players/${player}`);
-        onValue(playerRef, snap => {
-          // 這裡只要你的角色（role）、choose、money 之類有改，UI 就會自動更新
-          renderRoleUI(player, room);
-          // 如果你想同步刷新餘額，可以：
-          document.getElementById("money").textContent = "$" + (snap.val()?.money ?? 0);
-        });
-      
+
+      // 角色資訊即時監聽（推薦直接監聽整個玩家物件）
+      const playerRef = ref(db, `rooms/${room}/players/${player}`);
+      onValue(playerRef, snap => {
+        // 這裡只要你的角色（role）、choose、money 之類有改，UI 就會自動更新
+        renderRoleUI(player, room);
+        // 如果你想同步刷新餘額，可以：
+        document.getElementById("money").textContent = "$" + (snap.val()?.money ?? 0);
+      });
+
       loadMyInvestments();
 
       const playersRef = ref(db, `rooms/${room}/players`);
@@ -74,6 +74,7 @@
           targetStatus.textContent = "";
         }
 
+        // 回合結束判斷
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
@@ -82,26 +83,26 @@
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
 
-            
             const updates = {
-                [`rooms/${room}/players/${name}/money`]: newMoney,
-                [`rooms/${room}/players/${name}/done`]: false,
-                [`rooms/${room}/players/${name}/agentOption/invested`]: false, //代理人重製投資功能
-                [`rooms/${room}/players/${name}/scammerGotInvestment`]: false,// 重置每回合
-                [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft,//回合數減去
-              };
-            //詐騙者扣款
+              [`rooms/${room}/players/${name}/money`]: newMoney,
+              [`rooms/${room}/players/${name}/done`]: false,
+              [`rooms/${room}/players/${name}/agentOption/invested`]: false, // 代理人重製投資功能
+              [`rooms/${room}/players/${name}/scammerGotInvestment`]: false, // 重置每回合
+              [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft, // 回合數減去
+            };
+
+            // 詐騙者扣款
             if (isScammer) {
               if (gotInvested) {
-                //有被投資+200元
-                 updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
+                // 有被投資+200元
+                updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
               } else {
                 // 這回合沒被投資，要扣 200
                 updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
               }
             }
-          
-             if (data.role === "投資代理人") {
+
+            if (data.role === "投資代理人") {
               // 本回合開始時 >0，這回合剛變 0（方案剛結束），只在這一刻判斷懲罰
               if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
                 const investors = data.investors || {};
@@ -126,53 +127,10 @@
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
           endRoundNotice.style.display = "block";
+        }
+      });
 
-          // ============ 交換角色邏輯 ============
-
-          // 1. 統計 choose==true 的人
-          const choosers = [];
-          const ordinaryCount = Object.values(players).filter(p => p.role === "普通人").length;
-          
-          for (const [name, data] of Object.entries(players)) {
-            if (data.choose === true) {
-              choosers.push({ name, role: data.role });
-            }
-          }
-          //重整
-      //     // 2. 判斷是否需要交換
-      //     if (choosers.length > ordinaryCount) {
-
-      //       // 3. 隨機打亂角色
-      //       const rolesToShuffle = choosers.map(p => p.role);
-      //       console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
-      //       // Fisher–Yates 洗牌
-      //       for (let i = rolesToShuffle.length - 1; i > 0; i--) {
-      //         const j = Math.floor(Math.random() * (i + 1));
-      //         [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
-      //       }
-          
-      //       // 4. 交換角色 & 設定 choose
-      //         const updates = {};
-      //         choosers.forEach((player, idx) => {
-      //           const newRole = rolesToShuffle[idx];
-      //           updates[`rooms/${room}/players/${player.name}/role`] = newRole;
-      //           // 普通人 choose=true，特殊身分 choose=false
-      //           updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
-      //         });
-            
-      //         await update(ref(db), updates);
-            
-      //         // 通知
-      //         const endRoundNotice = document.getElementById("endRoundNotice");
-      //         endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
-      //         endRoundNotice.style.display = "block";
-      //     }
-        
-        
-        
-      //   }
-      // });
-
+      // 結束動作監聽
       const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
       onValue(doneRef, snap => {
         const done = snap.val();
@@ -222,12 +180,12 @@
       const targetData = targetSnap.val() || {};
       const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
 
-     // 先組出對方的 updates
+      // 先組出對方的 updates
       const updates = {
         money: (targetData.money || 0) + amount,
         [`investors/${player}`]: existingInvestment + amount
       };
-    
+
       // 如果對方是詐騙者且本回合還沒被投資過
       if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
         updates.money += 200; // 再加200元
@@ -235,7 +193,7 @@
       }
 
       await update(targetRef, updates);
-      
+
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
       const myInvestmentSnap = await get(myInvestmentRef);
       const myInvestments = myInvestmentSnap.val() || {};
@@ -318,7 +276,6 @@
     <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
     <button onclick="invest()">確認投資</button>
     <p id="investStatus"></p>
-
     <div style="margin-top: 1rem;">
       <button id="endTurnBtn">結束本回合動作</button>
       <p id="endTurnStatus" style="color: green;"></p>
