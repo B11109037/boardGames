@@ -117,18 +117,17 @@
                 }
                 // 交換身分記錄
                 updates[`rooms/${room}/players/${name}/choose`] = true;
-                await exchangeRolesIfNeeded(players, room, db);
               }
             }
             await update(ref(db), updates);
           }
 
-          await exchangeRolesIfNeeded(players, room, db);
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
           endRoundNotice.style.display = "block";
         }
       });
+      
 
       const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
       onValue(doneRef, snap => {
@@ -144,7 +143,8 @@
           endTurnStatus.textContent = "";
         }
       });
-
+      
+     await exchangeRolesIfNeeded(players, room, db);
       document.getElementById("endTurnBtn").addEventListener("click", async () => {
         await set(ref(db, `rooms/${room}/players/${player}/done`), true);
       });
