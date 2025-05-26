@@ -66,7 +66,7 @@
           targetStatus.textContent = "";
         }
 
-        // --- 回合結束流程 ---
+        // 檢查所有人是否 done
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
@@ -78,11 +78,191 @@
             const updates = {
               [`rooms/${room}/players/${name}/money`]: newMoney,
               [`rooms/${room}/players/${name}/done`]: false,
-              [`rooms/${room}/players/${name}/agentOption/invested`]: false,
-              [`rooms/${room}/players/${name}/scammerGotInvestment`]: false,
-              [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft,
+              [`rooms/${room}/players/${name}/agentOption/invested`]: false, // 代理人重製投資功能
+              [`rooms/${room}/players/${name}/scammerGotInvestment`]: false, // 重置每回合
+              [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft, // 回合數減去
             };
 
-            // 詐騙者沒被投資，扣200
             if (isScammer && !gotInvested) {
               updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+            }
+
+            if (data.role === "投資代理人") {
+              // 本回合開始時 >0，這回合剛變 0（方案剛結束），只在這一刻判斷懲罰
+              if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
+                const investors = data.investors || {};
+                // 沒回饋時才懲罰
+                if (Object.keys(investors).length > 0 && !data.hasGivenBack) {
+                  // 扣 1000 元
+                  updates[`rooms/${room}/players/${name}/money`] =
+                    (updates[`rooms/${room}/players/${name}/money`] || 0) - 1000;
+                  // 提示欄位寫入（給前端 role.js 監聽）
+                  updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間未回饋，扣除1000元";
+                } else {
+                  // 沒罰則時清空提示
+                  updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間請回饋，否則扣除1000元";
+                }
+              }
+            }
+            await update(ref(db), updates);
+          }
+
+          const endRoundNotice = document.getElementById("endRoundNotice");
+          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
+          endRoundNotice.style.display = "block";
+        }
+      });
+
+      const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
+      onValue(doneRef, snap => {
+        const done = snap.val();
+        const endTurnBtn = document.getElementById("endTurnBtn");
+        const endTurnStatus = document.getElementById("endTurnStatus");
+
+        if (done === true) {
+          endTurnBtn.disabled = true;
+          endTurnStatus.textContent = "✅ 已結束本回合";
+        } else {
+          endTurnBtn.disabled = false;
+          endTurnStatus.textContent = "";
+        }
+      });
+
+      document.getElementById("endTurnBtn").addEventListener("click", async () => {
+        await set(ref(db, `rooms/${room}/players/${player}/done`), true);
+      });
+    });
+
+    window.invest = async function () {
+      const target = document.getElementById("target").value;
+      const amountInput = document.getElementById("amount");
+      const amount = parseInt(amountInput.value);
+      const investStatus = document.getElementById("investStatus");
+
+      if (!target || isNaN(amount) || amount <= 0) {
+        investStatus.innerHTML = "❌ <span style='color:red;'>請輸入正確金額與選擇投資對象</span>";
+        return;
+      }
+
+      const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
+      const mySnap = await get(myMoneyRef);
+      const myMoney = mySnap.val() || 0;
+
+      if (amount > myMoney) {
+        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，損失 $" + amount + "</span>";
+        return;
+      }
+
+      await update(ref(db, `rooms/${room}/players/${player}`), {
+        money: myMoney - amount
+      });
+
+      const targetRef = ref(db, `rooms/${room}/players/${target}`);
+      const targetSnap = await get(targetRef);
+      const targetData = targetSnap.val() || {};
+      const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
+
+      await update(targetRef, {
+        money: (targetData.money || 0) + amount,
+        [`investors/${player}`]: existingInvestment + amount
+      });
+
+      const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
+      const myInvestmentSnap = await get(myInvestmentRef);
+      const myInvestments = myInvestmentSnap.val() || {};
+
+      await update(myInvestmentRef, {
+        [target]: (myInvestments[target] || 0) + amount
+      });
+
+      amountInput.value = "";
+      investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
+    }
+
+    function loadMyInvestments() {
+      const myInvestmentsRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
+      onValue(myInvestmentsRef, snap => {
+        const investments = snap.val() || {};
+        const investmentList = document.getElementById("investmentList");
+
+        investmentList.innerHTML = "";
+
+        if (Object.keys(investments).length === 0) {
+          investmentList.innerHTML = "<p>⚠️ 尚未有投資紀錄</p>";
+          return;
+        }
+
+        for (let target in investments) {
+          const card = document.createElement("div");
+          card.className = "investment-card";
+          card.innerHTML = `<p><strong>對象：</strong> ${target}</p><p><strong>累積金額：</strong> $${investments[target]}</p>`;
+          investmentList.appendChild(card);
+        }
+      });
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 1rem;
+      max-width: 500px;
+      margin: auto;
+    }
+    .card {
+      background: #fff;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .investment-card {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    #investmentList p {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>玩家：<span id="playerName">載入中...</span></h2>
+    <p>💰 餘額：<strong id="money">$0</strong></p>
+    <p id="scammerNotice" style="color: green;"></p>
+  </div>
+
+  <div class="card" id="rolePanel">
+    <p>正在載入角色資訊...</p>
+  </div>
+
+  <div class="card" id="investPanel">
+    <h3>我要投資：</h3>
+    <label for="target">選擇對象：</label>
+    <select id="target"></select>
+    <div id="targetStatus" style="color: red; font-size: 0.9em;"></div>
+    <label for="amount">投資金額：</label>
+    <input type="number" id="amount" placeholder="輸入金額，例如 20" min="1">
+    <button onclick="invest()">確認投資</button>
+    <p id="investStatus"></p>
+
+    <div style="margin-top: 1rem;">
+      <button id="endTurnBtn">結束本回合動作</button>
+      <p id="endTurnStatus" style="color: green;"></p>
+    </div>
+  </div>
+
+  <div class="card" id="investmentHistory">
+    <h3>我的投資紀錄：</h3>
+    <div id="investmentList">
+      <p>尚未有投資紀錄</p>
+    </div>
+  </div>
+
+  <div id="endRoundNotice" style="display:none; background:#d0f0d0; border:1px solid #5cb85c; padding:1rem; border-radius:10px; margin:1rem auto; max-width:500px; text-align:center; font-weight:bold; color:#2c662d;"></div>
+</body>
+</html>
