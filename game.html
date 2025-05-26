@@ -90,9 +90,15 @@
                 [`rooms/${room}/players/${name}/scammerGotInvestment`]: false,// 重置每回合
                 [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft,//回合數減去
               };
-            
-            if (isScammer && !gotInvested) {
-              updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+            //詐騙者扣款
+            if (isScammer) {
+              if (gotInvested) {
+                // 這回合有被投資：什麼都不用做（因為已經加過 200），只要重置
+                updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false;
+              } else {
+                // 這回合沒被投資，要扣 200
+                updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+              }
             }
           
              if (data.role === "投資代理人") {
