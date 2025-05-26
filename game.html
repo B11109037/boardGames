@@ -250,6 +250,22 @@
         const j = Math.floor(Math.random() * (i + 1));
         [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
       }
+      
+      // 建立交換對照表，方便 console.log
+      const resultList = [];
+      choosers.forEach((player, idx) => {
+        resultList.push({
+          name: player.name,
+          oldRole: player.role,
+          newRole: rolesToShuffle[idx]
+        });
+      });
+  
+      // 印出交換配對結果
+      console.log("[交換角色結果]");
+      resultList.forEach(r => {
+        console.log(`${r.name}: ${r.oldRole} → ${r.newRole}`);
+      });
       // 4. 交換角色 & 設定 choose
       const updates = {};
       choosers.forEach((player, idx) => {
