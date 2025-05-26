@@ -171,15 +171,9 @@
       const updates = {};
       updates[`rooms/${room}/players/${targetName}/money`] = currentMoney + amount;
       updates[`rooms/${room}/players/${targetName}/investors/${player}`] = currentInvest + amount;
+    
       
-      // 先組出對方的 updates
-      const updates = {
-        money: currentMoney + amount,
-        [`investors/${player}`]: currentInvest + amount,
-      };
-      
-      // 如果對方是詐騙者且本回合還沒被投資過
-      // 這裡要用完整路徑！
+      // 如果對方是詐騙者且本回合還沒被投資過！
       if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
         updates[`rooms/${room}/players/${targetName}/money`] += 200;
         updates[`rooms/${room}/players/${targetName}/scammerGotInvestment`] = true;
