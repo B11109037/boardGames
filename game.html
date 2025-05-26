@@ -155,7 +155,7 @@
       const myMoney = mySnap.val() || 0;
 
       if (amount > myMoney) {
-        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，損失 $" + amount + "</span>";
+        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，損失，餘額不足</span>";
         return;
       }
 
@@ -168,10 +168,20 @@
       const targetData = targetSnap.val() || {};
       const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
 
-      await update(targetRef, {
+      
+      // 先組出對方的 updates
+      await updates(targetRef, {
         money: (targetData.money || 0) + amount,
         [`investors/${player}`]: existingInvestment + amount
       });
+      
+      // 如果對方是詐騙者且本回合還沒被投資過
+      if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
+        updates.money += 200; // 再加200元
+        updates.scammerGotInvestment = true; // 本回合設成 true
+      }
+
+      await update(targetRef, updates);
 
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
       const myInvestmentSnap = await get(myInvestmentRef);
