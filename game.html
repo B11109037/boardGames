@@ -83,13 +83,20 @@
               [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft, // 回合數減去
             };
 
-            if (isScammer && !gotInvested) {
-              updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+            // 詐騙者扣款
+            if (isScammer) {
+              if (gotInvested) {
+                // 有被投資+200元
+                updates[`rooms/${room}/players/${name}/scammerGotInvestment`] = false; // 重設
+              } else {
+                // 這回合沒被投資，要扣 200
+                updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
+              }
             }
 
+
             if (data.role === "投資代理人") {
-              // 本回合開始時 >0，這回合剛變 0（方案剛結束），只在這一刻判斷懲罰
-              
+   
               const investors = data.investors || {};
                // 只要有人投資且尚未回饋就提示
               if (Object.keys(investors).length > 0 && !data.hasGivenBack) {
@@ -97,7 +104,7 @@
               } else {
                 updates[`rooms/${room}/players/${name}/penaltyNotice`] = "";
               }
-              
+              // 本回合開始時 >0，這回合剛變 0（方案剛結束），只在這一刻判斷懲罰
               if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
 
                 // 沒回饋時才懲罰
