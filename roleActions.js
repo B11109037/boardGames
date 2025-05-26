@@ -160,7 +160,6 @@ export async function renderRoleUI(playerName, roomCode) {
         notice.style.color = "red";
         notice.style.display = "block";
       } else if (value && notice) {
-        updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
         notice.textContent = "✅你被投資了，獲得200元獎勵"; // 有被投資就不顯示警告（或可顯示綠色提示）
         notice.style.color = "green";
         notice.style.display = "block";
