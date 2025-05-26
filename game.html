@@ -121,6 +121,7 @@
             }
             await update(ref(db), updates);
           }
+          //角色交換
           await exchangeRolesIfNeeded(players, room, db);
           
           const endRoundNotice = document.getElementById("endRoundNotice");
