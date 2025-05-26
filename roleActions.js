@@ -113,12 +113,10 @@ export async function renderRoleUI(playerName, roomCode) {
         [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: oldReceived + amount,
         [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
         [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount,
-        [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount
+        [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount,
+        [`rooms/${roomCode}/players/${playerName}/hasGivenBack`]: true   //紀錄有回饋
       });
-      //紀錄有回饋
-      await update(ref(db, `rooms/${roomCode}/players/${playerName}`), {
-        hasGivenBack: true
-      });
+
       
       document.getElementById("allocateAmount").value = "";
       document.getElementById("allocateTarget").selectedIndex = 0;
