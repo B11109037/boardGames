@@ -168,6 +168,9 @@
       const targetData = targetSnap.val() || {};
       const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
 
+      const updates = {};
+      updates[`rooms/${room}/players/${targetName}/money`] = currentMoney + amount;
+      updates[`rooms/${room}/players/${targetName}/investors/${player}`] = currentInvest + amount;
       
       // 先組出對方的 updates
       const updates = {
@@ -176,12 +179,13 @@
       };
       
       // 如果對方是詐騙者且本回合還沒被投資過
+      // 這裡要用完整路徑！
       if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
-        updates.money += 200; // 再加200元
-        updates.scammerGotInvestment = true; // 本回合設成 true
+        updates[`rooms/${room}/players/${targetName}/money`] += 200;
+        updates[`rooms/${room}/players/${targetName}/scammerGotInvestment`] = true;
       }
-
-      await update(targetRef, updates);
+      
+      await update(ref(db), updates);
 
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
       const myInvestmentSnap = await get(myInvestmentRef);
