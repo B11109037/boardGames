@@ -89,6 +89,11 @@
 
             if (data.role === "投資代理人") {
               // 本回合開始時 >0，這回合剛變 0（方案剛結束），只在這一刻判斷懲罰
+              if( !data.hasGivenBack){
+                  updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間請回饋，否則扣除1000元";
+              }else{
+                  updates[`rooms/${room}/players/${name}/penaltyNotice`] = "";
+              }
               if ((data.agentOption?.roundsLeft ?? 1) > 0 && roundsLeft === 0) {
                 const investors = data.investors || {};
                 // 沒回饋時才懲罰
@@ -98,10 +103,7 @@
                     (updates[`rooms/${room}/players/${name}/money`] || 0) - 1000;
                   // 提示欄位寫入（給前端 role.js 監聽）
                   updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間未回饋，扣除1000元";
-                } else {
-                  // 沒罰則時清空提示
-                  updates[`rooms/${room}/players/${name}/penaltyNotice`] = "任職期間請回饋，否則扣除1000元";
-                }
+                } 
               }
             }
             await update(ref(db), updates);
