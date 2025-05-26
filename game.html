@@ -139,39 +139,39 @@
             }
           }
           //重整
-          // 2. 判斷是否需要交換
-          if (choosers.length > ordinaryCount) {
+      //     // 2. 判斷是否需要交換
+      //     if (choosers.length > ordinaryCount) {
 
-            // 3. 隨機打亂角色
-            const rolesToShuffle = choosers.map(p => p.role);
-            console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
-            // Fisher–Yates 洗牌
-            for (let i = rolesToShuffle.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
-            }
+      //       // 3. 隨機打亂角色
+      //       const rolesToShuffle = choosers.map(p => p.role);
+      //       console.log("[交換角色] 執行，參與者：", choosers.map(x=>x.name), "角色列表：", rolesToShuffle);
+      //       // Fisher–Yates 洗牌
+      //       for (let i = rolesToShuffle.length - 1; i > 0; i--) {
+      //         const j = Math.floor(Math.random() * (i + 1));
+      //         [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
+      //       }
           
-            // 4. 交換角色 & 設定 choose
-              const updates = {};
-              choosers.forEach((player, idx) => {
-                const newRole = rolesToShuffle[idx];
-                updates[`rooms/${room}/players/${player.name}/role`] = newRole;
-                // 普通人 choose=true，特殊身分 choose=false
-                updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
-              });
+      //       // 4. 交換角色 & 設定 choose
+      //         const updates = {};
+      //         choosers.forEach((player, idx) => {
+      //           const newRole = rolesToShuffle[idx];
+      //           updates[`rooms/${room}/players/${player.name}/role`] = newRole;
+      //           // 普通人 choose=true，特殊身分 choose=false
+      //           updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
+      //         });
             
-              await update(ref(db), updates);
+      //         await update(ref(db), updates);
             
-              // 通知
-              const endRoundNotice = document.getElementById("endRoundNotice");
-              endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
-              endRoundNotice.style.display = "block";
-          }
+      //         // 通知
+      //         const endRoundNotice = document.getElementById("endRoundNotice");
+      //         endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
+      //         endRoundNotice.style.display = "block";
+      //     }
         
         
         
-        }
-      });
+      //   }
+      // });
 
       const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
       onValue(doneRef, snap => {
