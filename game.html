@@ -38,7 +38,15 @@
         });
       });
 
-      renderRoleUI(player, room);
+      // ⭐⭐⭐ 角色資訊即時監聽（推薦直接監聽整個玩家物件）
+      const playerRef = ref(db, `rooms/${room}/players/${player}`);
+      onValue(playerRef, snap => {
+          // 這裡只要你的角色（role）、choose、money 之類有改，UI 就會自動更新
+          renderRoleUI(player, room);
+          // 如果你想同步刷新餘額，可以：
+          document.getElementById("money").textContent = "$" + (snap.val()?.money ?? 0);
+      });
+      
       loadMyInvestments();
 
       const playersRef = ref(db, `rooms/${room}/players`);
