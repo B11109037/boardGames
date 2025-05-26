@@ -240,7 +240,8 @@
         choosers.push({ name, role: data.role });
       }
     }
-  
+    console.log("[Debug] choosers:", choosers, "ordinaryCount:", ordinaryCount);
+      
     // 2. 判斷是否需要交換
     if (choosers.length > ordinaryCount) {
       // 3. 隨機打亂角色
