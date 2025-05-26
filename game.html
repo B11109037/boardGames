@@ -121,7 +121,8 @@
             }
             await update(ref(db), updates);
           }
-
+          await exchangeRolesIfNeeded(players, room, db);
+          
           const endRoundNotice = document.getElementById("endRoundNotice");
           endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
           endRoundNotice.style.display = "block";
@@ -227,6 +228,46 @@
         }
       });
     }
+
+    export async function exchangeRolesIfNeeded(players, room, db) {
+    // 1. 找出 choose==true 的人
+    const choosers = [];
+    const ordinaryCount = Object.values(players).filter(p => p.role === "普通人").length;
+  
+    for (const [name, data] of Object.entries(players)) {
+      if (data.choose === true) {
+        choosers.push({ name, role: data.role });
+      }
+    }
+  
+    // 2. 判斷是否需要交換
+    if (choosers.length > ordinaryCount) {
+      // 3. 隨機打亂角色
+      const rolesToShuffle = choosers.map(p => p.role);
+      // Fisher–Yates 洗牌
+      for (let i = rolesToShuffle.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rolesToShuffle[i], rolesToShuffle[j]] = [rolesToShuffle[j], rolesToShuffle[i]];
+      }
+      // 4. 交換角色 & 設定 choose
+      const updates = {};
+      choosers.forEach((player, idx) => {
+        const newRole = rolesToShuffle[idx];
+        updates[`rooms/${room}/players/${player.name}/role`] = newRole;
+        // 普通人 choose=true，特殊身分 choose=false
+        updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
+      });
+  
+      await update(ref(db), updates);
+  
+      // 通知
+      const endRoundNotice = document.getElementById("endRoundNotice");
+      if (endRoundNotice) {
+        endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
+        endRoundNotice.style.display = "block";
+      }
+    }
+  }
   </script>
   <style>
     body {
