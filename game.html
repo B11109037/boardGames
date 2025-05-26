@@ -144,51 +144,55 @@
       const amountInput = document.getElementById("amount");
       const amount = parseInt(amountInput.value);
       const investStatus = document.getElementById("investStatus");
-
+    
       if (!target || isNaN(amount) || amount <= 0) {
         investStatus.innerHTML = "❌ <span style='color:red;'>請輸入正確金額與選擇投資對象</span>";
         return;
       }
-
+    
       const myMoneyRef = ref(db, `rooms/${room}/players/${player}/money`);
       const mySnap = await get(myMoneyRef);
       const myMoney = mySnap.val() || 0;
-
+    
       if (amount > myMoney) {
-        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，損失，餘額不足</span>";
+        investStatus.innerHTML = "❌ <span style='color:red;'>投資失敗，餘額不足</span>";
         return;
       }
-
+    
+      // 扣除自己金額
       await update(ref(db, `rooms/${room}/players/${player}`), {
         money: myMoney - amount
       });
-
+    
+      // 取得對方資訊
       const targetRef = ref(db, `rooms/${room}/players/${target}`);
       const targetSnap = await get(targetRef);
       const targetData = targetSnap.val() || {};
+      const currentMoney = targetData.money || 0;
       const existingInvestment = (targetData.investors && targetData.investors[player]) || 0;
-
-      const updates = {};
-      updates[`rooms/${room}/players/${targetName}/money`] = currentMoney + amount;
-      updates[`rooms/${room}/players/${targetName}/investors/${player}`] = currentInvest + amount;
     
-      
-      // 如果對方是詐騙者且本回合還沒被投資過！
+      // 建立 updates 物件
+      const updates = {};
+      updates[`rooms/${room}/players/${target}/money`] = currentMoney + amount;
+      updates[`rooms/${room}/players/${target}/investors/${player}`] = existingInvestment + amount;
+    
+      // 如果對方是詐騙者且本回合還沒被投資過
       if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
-        updates[`rooms/${room}/players/${targetName}/money`] += 200;
-        updates[`rooms/${room}/players/${targetName}/scammerGotInvestment`] = true;
+        updates[`rooms/${room}/players/${target}/money`] += 200;
+        updates[`rooms/${room}/players/${target}/scammerGotInvestment`] = true;
       }
-      
+    
       await update(ref(db), updates);
-
+    
+      // 更新自己投資紀錄
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
       const myInvestmentSnap = await get(myInvestmentRef);
       const myInvestments = myInvestmentSnap.val() || {};
-
+    
       await update(myInvestmentRef, {
         [target]: (myInvestments[target] || 0) + amount
       });
-
+    
       amountInput.value = "";
       investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
     }
