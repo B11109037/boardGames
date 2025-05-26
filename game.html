@@ -224,7 +224,8 @@
 
       await update(targetRef, {
         money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: existingInvestment + amount
+        [`investors/${player}`]: existingInvestment + amount,
+        scammerGotInvestment: true // 只要本回合有投資，flag 會被設成 true
       });
 
       const myInvestmentRef = ref(db, `rooms/${room}/players/${player}/myInvestments`);
