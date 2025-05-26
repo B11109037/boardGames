@@ -170,9 +170,9 @@
 
       
       // 先組出對方的 updates
-      await updates ={
-        money: (targetData.money || 0) + amount,
-        [`investors/${player}`]: existingInvestment + amount,
+      const updates = {
+        money: currentMoney + amount,
+        [`investors/${player}`]: currentInvest + amount,
       };
       
       // 如果對方是詐騙者且本回合還沒被投資過
