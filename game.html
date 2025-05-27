@@ -38,12 +38,15 @@
         });
       });
 
-      onValue(playerRef, snap => {
-        renderRoleUI(player, room);
-      });
-
+      renderRoleUI(player, room);
       loadMyInvestments();
-
+       // ⭐⭐ 加上這個，角色資料有變化就自動刷新畫面（包含角色交換、choose 狀態等）
+      const playerRef = ref(db, `rooms/${room}/players/${player}`);
+      onValue(playerRef, snap => {
+          renderRoleUI(player, room);
+        });
+      });
+      
       const playersRef = ref(db, `rooms/${room}/players`);
       onValue(playersRef, async (snap) => {
         const players = snap.val() || {};
@@ -61,7 +64,7 @@
             hasTarget = true;
           }
         }
-
+     
         if (!hasTarget) {
           targetSelect.innerHTML = `<option disabled selected>無可投資對象</option>`;
           targetStatus.textContent = "⚠️ 目前房間內沒有其他可投資對象";
@@ -137,7 +140,7 @@
           endRoundNotice.style.display = "block";
         }
       });
-      
+       
 
       const doneRef = ref(db, `rooms/${room}/players/${player}/done`);
       onValue(doneRef, snap => {
