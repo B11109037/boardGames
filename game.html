@@ -38,7 +38,10 @@
         });
       });
 
-      renderRoleUI(player, room);
+      onValue(playerRef, snap => {
+        renderRoleUI(player, room);
+      });
+
       loadMyInvestments();
 
       const playersRef = ref(db, `rooms/${room}/players`);
