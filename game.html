@@ -301,6 +301,10 @@
         endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
         endRoundNotice.style.display = "block";
       }
+      onValue(playerRef, snap => {
+        renderRoleUI(player, room);
+      });
+
     }
   }
   </script>
