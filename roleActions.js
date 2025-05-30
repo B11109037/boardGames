@@ -205,6 +205,13 @@ export async function renderRoleUI(playerName, roomCode) {
           scammerBtn.textContent = "✅ 已選擇動作";
         });
        }
+       // 每次都要依據 choose 狀態動態更新按鈕狀態
+      const chooseRef = ref(db, `rooms/${roomCode}/players/${playerName}/choose`);
+      onValue(chooseRef, snap => {
+        const hasChosen = snap.exists() ? snap.val() : false;
+        scammerBtn.disabled = !!hasChosen;
+        scammerBtn.textContent = hasChosen ? "✅ 已選擇動作" : "⚡ 詐騙者專屬動作";
+      });
     }
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
