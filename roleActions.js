@@ -228,19 +228,20 @@ export async function renderRoleUI(playerName, roomCode) {
           notice.style.display = message ? "block" : "block";
         }
       });
+      // ⭐⭐ 新增監聽機制，讓 roundsLeft 變 0 時自動解鎖方案並刷新畫面 ⭐⭐
+      onValue(agentOptionRef, async (snap) => {
+        const existing = snap.val();
+        // 若代理人方案已鎖定且回合數已歸零，強制解鎖並刷新
+        if (existing && existing.locked === true && existing.roundsLeft === 0) {
+          await update(agentOptionRef, { locked: false });
+          renderRoleUI(playerName, roomCode);  // 會跳出選擇新方案
+          return;
+        }
+      }, { onlyOnce: false }); // 確保是持續監聽
 
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
       if (existing?.locked === true) {
-        // //判斷當交換角色是同一個的狀況
-        //  if (existing.roundsLeft === 0) {
-        //   await update(agentOptionRef, {
-        //     locked: false
-        //   });
-        //   renderRoleUI(playerName, roomCode);
-        //   return;
-        // }
-
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
