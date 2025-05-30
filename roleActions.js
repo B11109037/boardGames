@@ -343,15 +343,21 @@ export async function renderRoleUI(playerName, roomCode) {
         </div>
       `;
 
-      document.getElementById("chooseA").addEventListener("click", async () => {
-        await lockAgentOption("A", existing.options.A);
-        renderRoleUI(playerName, roomCode);
-      });
-
-      document.getElementById("chooseB").addEventListener("click", async () => {
-        await lockAgentOption("B", existing.options.B);
-        renderRoleUI(playerName, roomCode);
-      });
+      const chooseA = document.getElementById("chooseA");
+      if (chooseA) {
+        chooseA.addEventListener("click", async () => {
+          await lockAgentOption("A", existing.options.A);
+          renderRoleUI(playerName, roomCode);
+        });
+       }
+      
+      const chooseB = document.getElementById("chooseB");
+      if (chooseB) {
+        chooseB.addEventListener("click", async () => {
+          await lockAgentOption("B", existing.options.B);
+          renderRoleUI(playerName, roomCode);
+        });
+       }
 
       async function lockAgentOption(option, detail) {
         const status = document.getElementById("agentStatus");
