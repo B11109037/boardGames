@@ -232,6 +232,15 @@ export async function renderRoleUI(playerName, roomCode) {
     get(agentOptionRef).then(async (snap) => {
       let existing = snap.val();
       if (existing?.locked === true) {
+        //判斷當交換角色是同一個的狀況
+         if (existing.roundsLeft === 0) {
+          await update(agentOptionRef, {
+            locked: false
+          });
+          renderRoleUI(playerName, roomCode);
+          return;
+        }
+
         section.style.display = "block";
         section.innerHTML = `
           <h3>你已選擇方案 ${existing.option}</h3>
