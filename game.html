@@ -40,12 +40,12 @@
 
       renderRoleUI(player, room);
       loadMyInvestments();
-       // ⭐⭐ 加上這個，角色資料有變化就自動刷新畫面（包含角色交換、choose 狀態等）
-      // const playerRef = ref(db, `rooms/${room}/players/${player}`);
-      // onValue(playerRef, snap => {
-      //     renderRoleUI(player, room);
-      // });
-  
+
+      const roleRef = ref(db, `rooms/${room}/players/${player}/role`);
+      onValue(roleRef, snap => {
+        // 只要角色有變動，自動更新 UI
+        renderRoleUI(player, room);
+      });
       
       const playersRef = ref(db, `rooms/${room}/players`);
       onValue(playersRef, async (snap) => {
