@@ -42,7 +42,7 @@ export async function renderRoleUI(playerName, roomCode) {
     extraInfo.innerHTML = html;
   }
 
-  if (role === "詐騙者" || role === "投資代理人") {
+  if (role === "行騙者" || role === "投資代理人") {
     const investorsRef = ref(db, `rooms/${roomCode}/players/${playerName}/investors`);
     const givenBackRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack`);
     const allocateSection = document.getElementById("allocateSection");
@@ -144,8 +144,8 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
 
-  // ============ 普通人查看收到的金額 ============
-  if (role !== "詐騙者" && role !== "投資代理人") {
+  // ============ 投資人查看收到的金額 ============
+  if (role !== "行騙者" && role !== "投資代理人") {
     const receivedRef = ref(db, `rooms/${roomCode}/players/${playerName}/received`);
     onValue(receivedRef, (snap) => {
       const received = snap.val() || {};
@@ -170,8 +170,8 @@ export async function renderRoleUI(playerName, roomCode) {
     });
   }
   //接續role.js
-// ============ 詐騙者加錢機制（僅提醒訊息功能） ============
-  if (role === "詐騙者") {
+// ============ 行騙者加錢機制（僅提醒訊息功能） ============
+  if (role === "行騙者") {
     const gotInvestmentRef = ref(db, `rooms/${roomCode}/players/${playerName}/scammerGotInvestment`);
     const notice = document.getElementById("scammerNotice");
   
@@ -194,7 +194,7 @@ export async function renderRoleUI(playerName, roomCode) {
       if (!scammerBtn) {
         scammerBtn = document.createElement("button");
         scammerBtn.id = "scammerSpecialBtn";
-        scammerBtn.textContent = "⚡ 詐騙者專屬動作";
+        scammerBtn.textContent = "捲款潛逃";
         scammerBtn.style = `
           margin-top: 12px;
           padding: 8px 18px;
@@ -229,10 +229,10 @@ export async function renderRoleUI(playerName, roomCode) {
       onValue(chooseRef, snap => {
         const hasChosen = snap.exists() ? snap.val() : false;
         scammerBtn.disabled = !!hasChosen;
-        scammerBtn.textContent = hasChosen ? "✅ 已選擇動作" : "⚡ 詐騙者專屬動作";
+        scammerBtn.textContent = hasChosen ? "✅ 已選擇動作" : "捲款潛逃";
       });
-    }else if(role === "普通人") {
-      // 只要不是詐騙者，直接清空 notice
+    }else if(role === "投資人") {
+      // 只要不是行騙者，直接清空 notice
       const notice = document.getElementById("scammerNotice");
       if (notice) {
         notice.textContent = "";
