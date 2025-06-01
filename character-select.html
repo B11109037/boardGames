@@ -33,7 +33,7 @@
       }
       try {
         // 根據角色決定 choose 狀態
-          const choose = (role === "普通人");
+          const choose = (role === "投資人");
           const userRef = ref(db, `rooms/${room}/players/${player}`);
           // 一起寫入
           await update(userRef, { role, choose });
@@ -70,7 +70,7 @@
 </head>
 <body>
   <h2>請選擇你的角色</h2>
-  <div class="role-card" onclick="selectRole('詐騙者')">
+  <div class="role-card" onclick="selectRole('行騙者')">
     <h3>詐騙者</h3>
     <p>可以在任意回合捲走投資金。</p>
   </div>
@@ -78,7 +78,7 @@
     <h3>投資代理人</h3>
     <p>可以收集投資並分配回報。</p>
   </div>
-  <div class="role-card" onclick="selectRole('普通人')">
+  <div class="role-card" onclick="selectRole('投資人')">
     <h3>普通人</h3>
     <p>自由選擇是否投資與建造。</p>
   </div>
