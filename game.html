@@ -48,6 +48,7 @@
       // 10. 防毒軟體
       { id: 10, name: "防毒軟體", cost: 200, type: "passive_income", income: 500 },
     ];
+    window.cards = cards;//讓card變成全域變數
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("playerName").textContent = player;
