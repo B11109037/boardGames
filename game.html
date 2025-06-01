@@ -18,12 +18,36 @@
       messagingSenderId: "220150025271",
       appId: "1:220150025271:web:f4cfe780ebfd73e826c3b2"
     };
-
+  
     const app = initializeApp(firebaseConfig);
     const db = getDatabase();
     const urlParams = new URLSearchParams(window.location.search);
     const player = urlParams.get("player");
     const room = urlParams.get("room");
+
+
+    const cards = [
+      // 1. 防詐學院
+      { id: 1, name: "防詐學院", cost: 20, type: "passive_income", income: 20 },
+      // 2. 區塊鏈交易所
+      { id: 2, name: "區塊鏈交易所", cost: 50, type: "reward_boost", rewardPercent: 0.1 },
+      // 3. 驗證服務中心
+      { id: 3, name: "驗證服務中心", cost: 70, type: "reward_boost", rewardPercent: 0.23 },
+      // 4. 駭客軍團基地
+      { id: 4, name: "駭客軍團基地", cost: 120, type: "reward_boost", rewardPercent: 0.3 },
+      // 5. 防火牆城堡
+      { id: 5, name: "防火牆城堡", cost: 200, type: "passive_income", income: 500 },
+      // 6. 加密VPN
+      { id: 6, name: "加密VPN", cost: 20, type: "passive_income", income: 20 },
+      // 7. 零信任架構
+      { id: 7, name: "零信任架構", cost: 50, type: "reward_boost", rewardPercent: 0.1 },
+      // 8. 165反詐騙專線
+      { id: 8, name: "165反詐騙專線", cost: 70, type: "reward_boost", rewardPercent: 0.23 },
+      // 9. 釣魚網站
+      { id: 9, name: "釣魚網站", cost: 120, type: "reward_boost", rewardPercent: 0.3 },
+      // 10. 防毒軟體
+      { id: 10, name: "防毒軟體", cost: 200, type: "passive_income", income: 500 },
+    ];
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("playerName").textContent = player;
