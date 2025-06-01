@@ -118,7 +118,7 @@ export async function renderRoleUI(playerName, roomCode) {
       let rewardBoost = 0;
       for (let cardId in targetCards) {
         // cards 需在 role.js 可取得，或傳進來
-        const card = cards.find(c => c.id == cardId);
+        const card = window.cards.find(c => c.id == cardId);
         if (card && card.type === "reward_boost") {
           rewardBoost += card.rewardPercent;
         }
