@@ -217,7 +217,8 @@ export async function renderRoleUI(playerName, roomCode) {
       if (notice) {
         notice.textContent = "";
         notice.style.display = "none";
-    }
+       }
+     }
   // ============ 投資代理人選擇方案與投資邏輯 ============
   if (role === "投資代理人") {
     const agentOptionRef = ref(db, `rooms/${roomCode}/players/${playerName}/agentOption`);
