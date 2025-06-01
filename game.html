@@ -135,7 +135,7 @@
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
           for (const [name, data] of Object.entries(players)) {
-            const isScammer = data.role === "詐騙者";
+            const isScammer = data.role === "行騙者";
             const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
@@ -318,7 +318,7 @@
     export async function exchangeRolesIfNeeded(players, room, db) {
     // 1. 找出 choose==true 的人
     const choosers = [];
-    const ordinaryCount = Object.values(players).filter(p => p.role === "普通人").length;
+    const ordinaryCount = Object.values(players).filter(p => p.role === "投資人").length;
   
     for (const [name, data] of Object.entries(players)) {
       if (data.choose === true) {
@@ -358,7 +358,7 @@
         const newRole = rolesToShuffle[idx];
         updates[`rooms/${room}/players/${player.name}/role`] = newRole;
         // 普通人 choose=true，特殊身分 choose=false
-        updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
+        updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "投資人");
         updates[`rooms/${room}/players/${player.name}/investors`] = null;//重新設定
         updates[`rooms/${room}/players/${player.name}/givenBack`] = null;//重新設定
         updates[`rooms/${room}/players/${player.name}/penaltyNotice`] = null;//重新設定
