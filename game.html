@@ -96,6 +96,41 @@
           targetStatus.textContent = "";
         }
 
+
+          //建造卡邏輯
+          document.getElementById("buyCardBtn").addEventListener("click", async () => {
+          const select = document.getElementById("buildCardSelect");
+          const status = document.getElementById("buyCardStatus");
+          const cardId = parseInt(select.value);
+          if (!cardId) {
+            status.textContent = "請先選擇卡牌！";
+            return;
+          }
+          const card = cards.find(c => c.id === cardId);
+          // 取得目前金額
+          const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
+          const moneySnap = await get(moneyRef);
+          const currentMoney = moneySnap.val() ?? 0;
+          if (currentMoney < card.cost) {
+            status.textContent = "金額不足，無法購買此卡！";
+            return;
+          }
+          // 更新 Firebase: 扣錢、寫入擁有卡牌
+          const playerCardsRef = ref(db, `rooms/${room}/players/${player}/cards`);
+          const playerCardsSnap = await get(playerCardsRef);
+          const ownedCards = playerCardsSnap.val() || {};
+          if (ownedCards[cardId]) {
+            status.textContent = "你已經擁有這張卡牌！";
+            return;
+          }
+          const updates = {};
+          updates[`rooms/${room}/players/${player}/money`] = currentMoney - card.cost;
+          updates[`rooms/${room}/players/${player}/cards/${cardId}`] = true;
+          await update(ref(db), updates);
+          status.textContent = `已購買「${card.name}」！`;
+        });
+
+        
         // 檢查所有人是否 done
         const allDone = Object.values(players).every(p => p.done === true);
         if (allDone) {
@@ -242,6 +277,9 @@
     
       amountInput.value = "";
       investStatus.innerHTML = `✅ <span style='color:green;'>成功投資 ${target} $${amount}</span>`;
+
+    
+
     }
 
     function loadMyInvestments() {
