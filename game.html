@@ -139,7 +139,9 @@
             const gotInvested = data.scammerGotInvestment === true;
             const newMoney = (data.money || 0) + 100;
             const roundsLeft = Math.max((data.agentOption?.roundsLeft ?? 1) - 1, 0);
-
+            //額外加錢機制
+            const playerCards = data.cards || {};
+          
             const updates = {
               [`rooms/${room}/players/${name}/money`]: newMoney,
               [`rooms/${room}/players/${name}/done`]: false,
@@ -158,8 +160,17 @@
                 updates[`rooms/${room}/players/${name}/money`] = newMoney - 200;
               }
             }
-
-
+            
+            let extraIncome = 0;
+            for (let cardId in playerCards) {
+              const card = cards.find(c => c.id == cardId);
+              if (card && card.type === "passive_income") {
+                extraIncome += card.income;
+              }
+            }
+            // 再把 extraIncome 加到 money 結算
+            updates[`rooms/${room}/players/${name}/money`] += extraIncome;
+            
             if (data.role === "投資代理人") {
    
               const investors = data.investors || {};
