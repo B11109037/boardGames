@@ -108,11 +108,30 @@ export async function renderRoleUI(playerName, roomCode) {
       const givenBackTargetRef = ref(db, `rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`);
       const givenBackSnap = await get(givenBackTargetRef);
       const alreadyGiven = givenBackSnap.exists() ? givenBackSnap.val() : 0;
-
+      
+      // 1. 取得目標玩家擁有的卡牌
+      const targetCardsRef = ref(db, `rooms/${roomCode}/players/${targetName}/cards`);
+      const targetCardsSnap = await get(targetCardsRef);
+      const targetCards = targetCardsSnap.exists() ? targetCardsSnap.val() : {};
+      
+      // 2. 計算總 reward_boost 百分比
+      let rewardBoost = 0;
+      for (let cardId in targetCards) {
+        // cards 需在 role.js 可取得，或傳進來
+        const card = cards.find(c => c.id == cardId);
+        if (card && card.type === "reward_boost") {
+          rewardBoost += card.rewardPercent;
+        }
+      }
+      
+      // 3. 算加成金額
+      const extraReward = Math.round(amount * rewardBoost);
+      
+      // 4. 在 update 內一併加到目標玩家金錢
       await update(ref(db), {
         [`rooms/${roomCode}/players/${targetName}/received/${playerName}`]: oldReceived + amount,
         [`rooms/${roomCode}/players/${playerName}/money`]: currentMoney - amount,
-        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount,
+        [`rooms/${roomCode}/players/${targetName}/money`]: targetMoney + amount+extraReward, // ⭐有加成
         [`rooms/${roomCode}/players/${playerName}/givenBack/${targetName}`]: alreadyGiven + amount,
         [`rooms/${roomCode}/players/${playerName}/hasGivenBack`]: true   //紀錄有回饋
       });
