@@ -212,7 +212,7 @@ export async function renderRoleUI(playerName, roomCode) {
         scammerBtn.disabled = !!hasChosen;
         scammerBtn.textContent = hasChosen ? "✅ 已選擇動作" : "⚡ 詐騙者專屬動作";
       });
-    }else {
+    }else if(role === "普通人") {
       // 只要不是詐騙者，直接清空 notice
       if (notice) {
         notice.textContent = "";
