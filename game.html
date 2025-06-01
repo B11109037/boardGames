@@ -150,7 +150,7 @@
               [`rooms/${room}/players/${name}/agentOption/roundsLeft`]: roundsLeft, // 回合數減去
             };
 
-            // 詐騙者扣款
+            // 行騙者扣款
             if (isScammer) {
               if (gotInvested) {
                 // 有被投資+200元
@@ -269,8 +269,8 @@
       updates[`rooms/${room}/players/${target}/money`] = currentMoney + amount;
       updates[`rooms/${room}/players/${target}/investors/${player}`] = existingInvestment + amount;
     
-      // 如果對方是詐騙者且本回合還沒被投資過
-      if (targetData.role === "詐騙者" && !targetData.scammerGotInvestment) {
+      // 如果對方是行騙者且本回合還沒被投資過
+      if (targetData.role === "行騙者" && !targetData.scammerGotInvestment) {
         updates[`rooms/${room}/players/${target}/money`] += 200;
         updates[`rooms/${room}/players/${target}/scammerGotInvestment`] = true;
       }
@@ -357,7 +357,7 @@
       choosers.forEach((player, idx) => {
         const newRole = rolesToShuffle[idx];
         updates[`rooms/${room}/players/${player.name}/role`] = newRole;
-        // 普通人 choose=true，特殊身分 choose=false
+        // 投資人 choose=true，特殊身分 choose=false
         updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "投資人");
         updates[`rooms/${room}/players/${player.name}/investors`] = null;//重新設定
         updates[`rooms/${room}/players/${player.name}/givenBack`] = null;//重新設定
@@ -369,7 +369,7 @@
       // 通知
       const endRoundNotice = document.getElementById("endRoundNotice");
       if (endRoundNotice) {
-        endRoundNotice.textContent = "⚡ 角色已隨機重新分配！普通人自動標記換身分";
+        endRoundNotice.textContent = "⚡ 角色已隨機重新分配！投資人自動標記換身分";
         endRoundNotice.style.display = "block";
       }
     }
