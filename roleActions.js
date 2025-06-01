@@ -214,6 +214,7 @@ export async function renderRoleUI(playerName, roomCode) {
       });
     }else if(role === "普通人") {
       // 只要不是詐騙者，直接清空 notice
+      const notice = document.getElementById("scammerNotice");
       if (notice) {
         notice.textContent = "";
         notice.style.display = "none";
