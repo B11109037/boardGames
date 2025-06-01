@@ -288,7 +288,7 @@
         updates[`rooms/${room}/players/${player.name}/choose`] = (newRole === "普通人");
         updates[`rooms/${room}/players/${player.name}/investors`] = null;//重新設定
         updates[`rooms/${room}/players/${player.name}/givenBack`] = null;//重新設定
-        
+        updates[`rooms/${room}/players/${player.name}/penaltyNotice`] = null;//重新設定
       });
   
       await update(ref(db), updates);
