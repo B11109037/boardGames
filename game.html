@@ -131,6 +131,7 @@
       
         await update(ref(db), updates);
         status.textContent = `已購買「${card.name}」！`;
+        showOwnedCards();
       });
 
 
@@ -319,7 +320,26 @@
         }
       });
     }
-
+    
+    // 買卡後，查詢目前所有已擁有的卡片
+    async function showOwnedCards() {
+      const playerCardsRef = ref(db, `rooms/${room}/players/${player}/cards`);
+      const playerCardsSnap = await get(playerCardsRef);
+      const ownedCards = playerCardsSnap.val() || {};
+    
+      // 將卡牌 id 對應名稱與數量轉成文字陣列
+      const cardsInfo = Object.entries(ownedCards)
+        .map(([id, count]) => {
+          const card = cards.find(c => c.id == id);
+          return card ? `${card.name} ${count} 張` : `卡牌 ${id} ${count} 張`;
+        });
+    
+      // 寫入畫面
+      document.getElementById("ownedCardsList").innerHTML =
+        cardsInfo.length > 0 ? ("<b>你擁有的卡牌：</b><br>" + cardsInfo.join("<br>"))
+                             : "<b>你尚未擁有任何卡牌</b>";
+    }
+    
     export async function exchangeRolesIfNeeded(players, room, db) {
     // 1. 找出 choose==true 的人
     const choosers = [];
@@ -442,6 +462,9 @@
       </select>
       <button id="buyCardBtn">購買</button>
       <p id="buyCardStatus"></p>
+      <p id="buyCardStatus"></p>
+      <div id="ownedCardsList"></div>
+
     </div>
 
 
