@@ -363,15 +363,11 @@
         updates[`rooms/${room}/players/${player.name}/givenBack`] = null;//重新設定
         updates[`rooms/${room}/players/${player.name}/penaltyNotice`] = null;//重新設定
       });
-  
+      
       await update(ref(db), updates);
   
       // 通知
-      const endRoundNotice = document.getElementById("endRoundNotice");
-      if (endRoundNotice) {
-        endRoundNotice.textContent = "⚡ 角色已隨機重新分配！投資人自動標記換身分";
-        endRoundNotice.style.display = "block";
-      }
+       alert("⚡ 角色已隨機重新分配！！");
     }
   }
   </script>
