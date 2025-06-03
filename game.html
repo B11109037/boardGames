@@ -97,8 +97,9 @@
           targetStatus.textContent = "";
         }
 
-
-      //建造卡邏輯
+      const buyCardBtn = document.getElementById("buyCardBtn");
+      buyCardBtn.disabled = true;
+      //建造卡邏輯 
       document.getElementById("buyCardBtn").addEventListener("click", async () => {
         const select = document.getElementById("buildCardSelect");
         const status = document.getElementById("buyCardStatus");
@@ -132,7 +133,9 @@
       
         await update(ref(db), updates);
         status.textContent = `已購買「${card.name}」！`;
+        buyCardBtn.disabled = false;
         showOwnedCards();
+        
       });
 
 
