@@ -206,9 +206,8 @@
           
           await exchangeRolesIfNeeded(newPlayers, room, db); // 一定要用新的 players
           
-          const endRoundNotice = document.getElementById("endRoundNotice");
-          endRoundNotice.textContent = "🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！";
-          endRoundNotice.style.display = "block";
+          alert("🎉 所有人已結束本回合，已自動發放 $100 並更新角色狀態！");//改成彈出式訊息
+
         }
       });
        
