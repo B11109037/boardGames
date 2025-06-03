@@ -168,10 +168,12 @@
             let extraIncome = 0;
             for (let cardId in playerCards) {
               const card = cards.find(c => c.id == cardId);
+              const count = playerCards[cardId];   // 數量
               if (card && card.type === "passive_income") {
-                extraIncome += card.income;
+                extraIncome += card.income * count;
               }
             }
+
             // 再把 extraIncome 加到 money 結算
             updates[`rooms/${room}/players/${name}/money`] += extraIncome;
             
