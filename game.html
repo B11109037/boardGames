@@ -97,50 +97,6 @@
           targetStatus.textContent = "";
         }
 
-      const buyCardBtn = document.getElementById("buyCardBtn");
-
-      // 注意：監聽器只綁定一次，不要寫在會重複呼叫的 function 裡
-      buyCardBtn.addEventListener("click", async () => {
-        buyCardBtn.disabled = true; // 按下立刻鎖定防止連點
-      
-        const select = document.getElementById("buildCardSelect");
-        const status = document.getElementById("buyCardStatus");
-        const cardId = parseInt(select.value);
-      
-        if (!cardId) {
-          status.textContent = "請先選擇卡牌！";
-          buyCardBtn.disabled = false;
-          return;
-        }
-        const card = cards.find(c => c.id === cardId);
-      
-        // 取得目前金額
-        const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
-        const moneySnap = await get(moneyRef);
-        const currentMoney = moneySnap.val() ?? 0;
-        if (currentMoney < card.cost) {
-          status.textContent = "金額不足，無法購買此卡！";
-          buyCardBtn.disabled = false;
-          return;
-        }
-      
-        // 更新 Firebase: 扣錢 + 累加卡牌數量
-        // 查詢現有張數
-        const playerCardsRef = ref(db, `rooms/${room}/players/${player}/cards`);
-        const playerCardsSnap = await get(playerCardsRef);
-        const ownedCards = playerCardsSnap.val() || {};
-        const oldCount = ownedCards[cardId] || 0;
-        
-        const updates = {};
-        updates[`rooms/${room}/players/${player}/money`] = currentMoney - card.cost;
-        updates[`rooms/${room}/players/${player}/cards/${cardId}`] = oldCount + 1;
-      
-        await update(ref(db), updates);
-        status.textContent = `已購買「${card.name}」！`;
-        showOwnedCards();
-        buyCardBtn.disabled = false; // 結束後再打開
-      });
-
 
         
         // 檢查所有人是否 done
@@ -327,6 +283,48 @@
         }
       });
     }
+    // 你的購買卡片函式
+    async function buyCardLogic() {
+      const buyCardBtn = document.getElementById("buyCardBtn");
+      buyCardBtn.disabled = true;
+      const select = document.getElementById("buildCardSelect");
+      const status = document.getElementById("buyCardStatus");
+      const cardId = parseInt(select.value);
+    
+      if (!cardId) {
+          status.textContent = "請先選擇卡牌！";
+          buyCardBtn.disabled = false;
+          return;
+      }
+      const card = cards.find(c => c.id === cardId);
+      
+      // 取得目前金額
+      const moneyRef = ref(db, `rooms/${room}/players/${player}/money`);
+      const moneySnap = await get(moneyRef);
+      const currentMoney = moneySnap.val() ?? 0;
+      if (currentMoney < card.cost) {
+          status.textContent = "金額不足，無法購買此卡！";
+          buyCardBtn.disabled = false;
+          return;
+      }
+      
+      // 更新 Firebase: 扣錢 + 累加卡牌數量
+      // 查詢現有張數
+      const playerCardsRef = ref(db, `rooms/${room}/players/${player}/cards`);
+      const playerCardsSnap = await get(playerCardsRef);
+      const ownedCards = playerCardsSnap.val() || {};
+      const oldCount = ownedCards[cardId] || 0;
+        
+      const updates = {};
+      updates[`rooms/${room}/players/${player}/money`] = currentMoney - card.cost;
+      updates[`rooms/${room}/players/${player}/cards/${cardId}`] = oldCount + 1;
+      
+      await update(ref(db), updates);
+      status.textContent = `已購買「${card.name}」！`;
+      showOwnedCards();
+      buyCardBtn.disabled = false; // 結束後再打開
+    }
+
     
     // 買卡後，查詢目前所有已擁有的卡片
     async function showOwnedCards() {
