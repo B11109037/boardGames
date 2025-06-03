@@ -117,12 +117,13 @@ export async function renderRoleUI(playerName, roomCode) {
       // 2. 計算總 reward_boost 百分比
       let rewardBoost = 0;
       for (let cardId in targetCards) {
-        // cards 需在 role.js 可取得，或傳進來
         const card = window.cards.find(c => c.id == cardId);
+        const count = targetCards[cardId];  // 這是數量
         if (card && card.type === "reward_boost") {
-          rewardBoost += card.rewardPercent;
+          rewardBoost += card.rewardPercent * count;
         }
       }
+
       
       // 3. 算加成金額
       const extraReward = Math.round(amount * rewardBoost);
