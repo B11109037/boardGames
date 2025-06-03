@@ -120,14 +120,15 @@
         }
       
         // 更新 Firebase: 扣錢 + 累加卡牌數量
+        // 查詢現有張數
         const playerCardsRef = ref(db, `rooms/${room}/players/${player}/cards`);
         const playerCardsSnap = await get(playerCardsRef);
         const ownedCards = playerCardsSnap.val() || {};
-      
+        const oldCount = ownedCards[cardId] || 0;
+        
         const updates = {};
         updates[`rooms/${room}/players/${player}/money`] = currentMoney - card.cost;
-        // 原本有幾張就+1，沒有則為1
-        updates[`rooms/${room}/players/${player}/cards/${cardId}`] = (ownedCards[cardId] || 0) + 1;
+        updates[`rooms/${room}/players/${player}/cards/${cardId}`] = oldCount + 1;
       
         await update(ref(db), updates);
         status.textContent = `已購買「${card.name}」！`;
