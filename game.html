@@ -97,7 +97,8 @@
           targetStatus.textContent = "";
         }
 
-
+       const buyCardBtn = document.getElementById("buyCardBtn");
+        buyCardBtn.addEventListener("click", buyCardLogic);
         
         // 檢查所有人是否 done
         const allDone = Object.values(players).every(p => p.done === true);
