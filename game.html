@@ -98,15 +98,18 @@
         }
 
       const buyCardBtn = document.getElementById("buyCardBtn");
-      buyCardBtn.disabled = true;
-      //建造卡邏輯 
-      document.getElementById("buyCardBtn").addEventListener("click", async () => {
+
+      // 注意：監聽器只綁定一次，不要寫在會重複呼叫的 function 裡
+      buyCardBtn.addEventListener("click", async () => {
+        buyCardBtn.disabled = true; // 按下立刻鎖定防止連點
+      
         const select = document.getElementById("buildCardSelect");
         const status = document.getElementById("buyCardStatus");
         const cardId = parseInt(select.value);
       
         if (!cardId) {
           status.textContent = "請先選擇卡牌！";
+          buyCardBtn.disabled = false;
           return;
         }
         const card = cards.find(c => c.id === cardId);
@@ -117,6 +120,7 @@
         const currentMoney = moneySnap.val() ?? 0;
         if (currentMoney < card.cost) {
           status.textContent = "金額不足，無法購買此卡！";
+          buyCardBtn.disabled = false;
           return;
         }
       
@@ -133,9 +137,8 @@
       
         await update(ref(db), updates);
         status.textContent = `已購買「${card.name}」！`;
-        buyCardBtn.disabled = false;
         showOwnedCards();
-        
+        buyCardBtn.disabled = false; // 結束後再打開
       });
 
 
