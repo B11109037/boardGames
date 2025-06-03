@@ -350,12 +350,12 @@ export async function renderRoleUI(playerName, roomCode) {
         const optionA = {
           chance: Math.floor(Math.random() * 51) + 50,
           multiplier: parseFloat((Math.random() * 1 + 1).toFixed(2)),
-          duration: Math.floor(Math.random() * 4) + 1
+          duration: Math.floor(Math.random() * 2) + 1
         };
         const optionB = {
           chance: Math.floor(Math.random() * 31) + 20,
           multiplier: parseFloat((Math.random() * 1.5 + 1.5).toFixed(2)),
-          duration: Math.floor(Math.random() * 4) + 1
+          duration: Math.floor(Math.random() * 2) + 1
         };
 
         existing = {
